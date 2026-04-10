@@ -892,6 +892,8 @@ function AdminPortal() {
   const [orders] = useState(DEMO_ORDERS)
   const [showCost, setShowCost] = useState(true)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [selectedProducts, setSelectedProducts] = useState([])
+  const [bulkMargin, setBulkMargin] = useState('')
 
   if (!user || user.role !== 'admin') return <Navigate to="/login" />
 
@@ -1140,6 +1142,118 @@ function AdminPortal() {
               <p style={{ fontSize: '14px', color: 'var(--gray-500)', marginBottom: '24px' }}>
                 View all three pricing tiers. Edit wholesale and retail prices for each product.
               </p>
+
+              {/* Bulk Margin Toolbar */}
+              <div style={{
+                background: 'var(--white)', borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--gray-200)', padding: '16px 20px',
+                marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedProducts.length === products.length}
+                    onChange={e => setSelectedProducts(e.target.checked ? products.map(p => p.id) : [])}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--blue)' }}
+                  />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gray-700)' }}>
+                    {selectedProducts.length === products.length ? 'Deselect All' : 'Select All'} ({selectedProducts.length}/{products.length})
+                  </span>
+                </label>
+
+                <div style={{ width: '1px', height: '24px', background: 'var(--gray-200)' }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Margin %</span>
+                  <input
+                    type="number"
+                    value={bulkMargin}
+                    onChange={e => setBulkMargin(e.target.value)}
+                    placeholder="e.g. 40"
+                    style={{
+                      width: '80px', padding: '6px 10px', fontSize: '14px', fontWeight: 600,
+                      border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-sm)',
+                      textAlign: 'center',
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!bulkMargin || selectedProducts.length === 0) return
+                    const pct = parseFloat(bulkMargin) / 100
+                    setProducts(prev => {
+                      const updated = prev.map(p =>
+                        selectedProducts.includes(p.id)
+                          ? { ...p, wholesalePrice: Math.round(p.costPrice * (1 + pct) * 100) / 100 }
+                          : p
+                      )
+                      savePricing(updated)
+                      return updated
+                    })
+                  }}
+                  disabled={!bulkMargin || selectedProducts.length === 0}
+                  style={{
+                    padding: '7px 16px', fontSize: '13px', fontWeight: 600,
+                    background: selectedProducts.length > 0 && bulkMargin ? 'var(--blue)' : 'var(--gray-200)',
+                    color: selectedProducts.length > 0 && bulkMargin ? 'var(--white)' : 'var(--gray-400)',
+                    border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                  }}
+                >
+                  Apply to Wholesale
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!bulkMargin || selectedProducts.length === 0) return
+                    const pct = parseFloat(bulkMargin) / 100
+                    setProducts(prev => {
+                      const updated = prev.map(p => {
+                        if (!selectedProducts.includes(p.id)) return p
+                        const base = p.wholesalePrice > 0 ? p.wholesalePrice : p.costPrice
+                        return { ...p, retailPrice: Math.round(base * (1 + pct) * 100) / 100 }
+                      })
+                      savePricing(updated)
+                      return updated
+                    })
+                  }}
+                  disabled={!bulkMargin || selectedProducts.length === 0}
+                  style={{
+                    padding: '7px 16px', fontSize: '13px', fontWeight: 600,
+                    background: selectedProducts.length > 0 && bulkMargin ? 'var(--green)' : 'var(--gray-200)',
+                    color: selectedProducts.length > 0 && bulkMargin ? 'var(--white)' : 'var(--gray-400)',
+                    border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                  }}
+                >
+                  Apply to Retail
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!bulkMargin || selectedProducts.length === 0) return
+                    const pct = parseFloat(bulkMargin) / 100
+                    setProducts(prev => {
+                      const updated = prev.map(p => {
+                        if (!selectedProducts.includes(p.id)) return p
+                        const ws = Math.round(p.costPrice * (1 + pct) * 100) / 100
+                        return { ...p, wholesalePrice: ws, retailPrice: Math.round(ws * (1 + pct) * 100) / 100 }
+                      })
+                      savePricing(updated)
+                      return updated
+                    })
+                  }}
+                  disabled={!bulkMargin || selectedProducts.length === 0}
+                  style={{
+                    padding: '7px 16px', fontSize: '13px', fontWeight: 600,
+                    background: selectedProducts.length > 0 && bulkMargin ? 'var(--gray-900)' : 'var(--gray-200)',
+                    color: selectedProducts.length > 0 && bulkMargin ? 'var(--white)' : 'var(--gray-400)',
+                    border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                  }}
+                >
+                  Apply to Both
+                </button>
+              </div>
+
               <div style={{
                 background: 'var(--white)', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--gray-200)', overflow: 'hidden',
@@ -1147,6 +1261,14 @@ function AdminPortal() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                      <th style={{ padding: '12px 14px', width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedProducts.length === products.length}
+                          onChange={e => setSelectedProducts(e.target.checked ? products.map(p => p.id) : [])}
+                          style={{ width: '14px', height: '14px', accentColor: 'var(--blue)' }}
+                        />
+                      </th>
                       {['Product', 'Your Cost (Printify/FE)', 'You Charge Kris', 'Your Margin', 'Kris Charges Customers', 'Kris Margin', 'Actions'].map(h => (
                         <th key={h} style={{ padding: '12px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--gray-500)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {h}
@@ -1162,6 +1284,10 @@ function AdminPortal() {
                           key={p.id}
                           product={p}
                           isEditing={isEditing}
+                          selected={selectedProducts.includes(p.id)}
+                          onToggle={() => setSelectedProducts(prev =>
+                            prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                          )}
                           onEdit={() => setEditingProduct(p.id)}
                           onSave={(updates) => {
                             setProducts(prev => {
@@ -1212,15 +1338,28 @@ function AdminPortal() {
 // ============================================================
 // PRICING ROW (EDITABLE)
 // ============================================================
-function PricingRow({ product, isEditing, onEdit, onSave, onCancel }) {
+function PricingRow({ product, isEditing, selected, onToggle, onEdit, onSave, onCancel }) {
   const [wholesale, setWholesale] = useState(product.wholesalePrice)
   const [retail, setRetail] = useState(product.retailPrice)
 
+  useEffect(() => {
+    setWholesale(product.wholesalePrice)
+    setRetail(product.retailPrice)
+  }, [product.wholesalePrice, product.retailPrice])
+
   const yourMargin = ((wholesale - product.costPrice) / product.costPrice * 100).toFixed(0)
-  const krisMargin = ((retail - wholesale) / wholesale * 100).toFixed(0)
+  const krisMargin = wholesale > 0 ? ((retail - wholesale) / wholesale * 100).toFixed(0) : '0'
 
   return (
-    <tr style={{ borderBottom: '1px solid var(--gray-50)' }}>
+    <tr style={{ borderBottom: '1px solid var(--gray-50)', background: selected ? 'var(--blue-light)' : 'transparent' }}>
+      <td style={{ padding: '12px 14px', width: '40px' }}>
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          style={{ width: '14px', height: '14px', accentColor: 'var(--blue)' }}
+        />
+      </td>
       <td style={{ padding: '12px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src={product.image} alt="" style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
