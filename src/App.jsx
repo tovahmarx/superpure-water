@@ -329,15 +329,7 @@ function CustomerStore() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Droplets size={28} style={{ color: 'var(--blue)' }} />
-            <div>
-              <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                SUPER PURE WATER
-              </h1>
-              <p style={{ fontSize: '11px', color: 'var(--gray-500)', letterSpacing: '0.1em', fontWeight: 500 }}>
-                PREMIUM HYDRATION
-              </p>
-            </div>
+            <img src="/logo.svg" alt="Super Pure Water" style={{ height: '48px', width: 'auto' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <Link to="/login" style={{ fontSize: '13px', color: 'var(--gray-500)', fontWeight: 500 }}>
@@ -494,9 +486,11 @@ function ProductDetail({ product, onBack, priceType }) {
   const colorImgs = COLOR_IMAGES[product.id] || {}
   const [selectedColor, setSelectedColor] = useState(variants.colors[0] || '')
   const [selectedSize, setSelectedSize] = useState(variants.sizes[0] || '')
+  const [selectedImageIdx, setSelectedImageIdx] = useState(0)
   const [added, setAdded] = useState(false)
   const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
-  const currentImage = colorImgs[selectedColor] || product.image
+  const images = colorImgs[selectedColor] || [product.image]
+  const currentImage = images[selectedImageIdx] || images[0] || product.image
 
   const canAdd = (!variants.colors.length || selectedColor) && (!variants.sizes.length || selectedSize)
 
@@ -522,8 +516,27 @@ function ProductDetail({ product, onBack, priceType }) {
           <ArrowLeft size={16} /> Back to products
         </button>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)', alignItems: 'start' }}>
-          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)', position: 'sticky', top: '24px' }}>
-            <img src={currentImage} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+          <div style={{ position: 'sticky', top: '24px' }}>
+            <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
+              <img src={currentImage} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+            </div>
+            {images.length > 1 && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImageIdx(idx)}
+                    style={{
+                      width: '72px', height: '72px', borderRadius: 'var(--radius-sm)',
+                      border: selectedImageIdx === idx ? '2px solid var(--blue)' : '1px solid var(--gray-200)',
+                      background: 'var(--gray-50)', padding: '4px', cursor: 'pointer', overflow: 'hidden',
+                    }}
+                  >
+                    <img src={img} alt={idx === 0 ? 'Front' : 'Back'} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <Badge>{product.category}</Badge>
@@ -550,7 +563,7 @@ function ProductDetail({ product, onBack, priceType }) {
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {variants.colors.map(c => (
-                    <button key={c} onClick={() => setSelectedColor(c)} style={selectStyle(selectedColor === c)}>
+                    <button key={c} onClick={() => { setSelectedColor(c); setSelectedImageIdx(0) }} style={selectStyle(selectedColor === c)}>
                       {c}
                     </button>
                   ))}
@@ -768,7 +781,7 @@ function LoginPage() {
         boxShadow: 'var(--shadow-lg)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Droplets size={36} style={{ color: 'var(--blue)', margin: '0 auto 12px' }} />
+          <img src="/logo.svg" alt="Super Pure Water" style={{ height: '56px', width: 'auto', margin: '0 auto 12px', display: 'block' }} />
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--gray-900)' }}>Super Pure Water</h1>
           <p style={{ fontSize: '14px', color: 'var(--gray-500)', marginTop: '4px' }}>Sign in to your portal</p>
         </div>
@@ -855,11 +868,7 @@ function OwnerPortal() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Droplets size={24} style={{ color: 'var(--blue)' }} />
-            <div>
-              <h1 style={{ fontSize: '16px', fontWeight: 800, lineHeight: 1 }}>SUPER PURE WATER</h1>
-              <p style={{ fontSize: '11px', color: 'var(--gray-500)', fontWeight: 500 }}>WHOLESALE PORTAL</p>
-            </div>
+            <img src="/logo.svg" alt="Super Pure Water" style={{ height: '40px', width: 'auto' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '13px', color: 'var(--gray-500)' }}>Welcome, {user.name}</span>
@@ -1047,11 +1056,7 @@ function AdminPortal() {
       }}>
         <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Droplets size={22} style={{ color: 'var(--blue)' }} />
-            <div>
-              <h1 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.02em' }}>SUPER PURE</h1>
-              <p style={{ fontSize: '10px', opacity: 0.5, letterSpacing: '0.08em' }}>ADMIN PANEL</p>
-            </div>
+            <img src="/logo.svg" alt="Super Pure Water" style={{ height: '36px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
           </div>
         </div>
         <nav style={{ padding: '12px 8px', flex: 1 }}>
@@ -1634,7 +1639,9 @@ function RequestProductDetail({ product, onBack, onAdd }) {
   const colorImgs = COLOR_IMAGES[product.id] || {}
   const [selColor, setSelColor] = useState(variants.colors[0] || '')
   const [selSize, setSelSize] = useState(variants.sizes[0] || '')
-  const currentImg = colorImgs[selColor] || product.image
+  const [selectedImageIdx, setSelectedImageIdx] = useState(0)
+  const images = colorImgs[selColor] || [product.image]
+  const currentImg = images[selectedImageIdx] || images[0] || product.image
 
   const selectStyle = (active) => ({
     padding: '8px 16px', fontSize: '13px', fontWeight: 600,
@@ -1650,9 +1657,28 @@ function RequestProductDetail({ product, onBack, onAdd }) {
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
           <ArrowLeft size={16} /> Back to products
         </button>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)' }}>
-          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
-            <img src={currentImg} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)', alignItems: 'start' }}>
+          <div style={{ position: 'sticky', top: '24px' }}>
+            <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
+              <img src={currentImg} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+            </div>
+            {images.length > 1 && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImageIdx(idx)}
+                    style={{
+                      width: '72px', height: '72px', borderRadius: 'var(--radius-sm)',
+                      border: selectedImageIdx === idx ? '2px solid var(--blue)' : '1px solid var(--gray-200)',
+                      background: 'var(--gray-50)', padding: '4px', cursor: 'pointer', overflow: 'hidden',
+                    }}
+                  >
+                    <img src={img} alt={idx === 0 ? 'Front' : 'Back'} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <Badge>{product.category}</Badge>
@@ -1670,7 +1696,7 @@ function RequestProductDetail({ product, onBack, onAdd }) {
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {variants.colors.map(c => (
-                    <button key={c} onClick={() => setSelColor(c)} style={selectStyle(selColor === c)}>{c}</button>
+                    <button key={c} onClick={() => { setSelColor(c); setSelectedImageIdx(0) }} style={selectStyle(selColor === c)}>{c}</button>
                   ))}
                 </div>
               </div>
@@ -1746,11 +1772,7 @@ function EmployeeRequest() {
         padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Droplets size={24} style={{ color: 'var(--blue)' }} />
-          <div>
-            <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--gray-900)' }}>SUPER PURE WATER</span>
-            <span style={{ fontSize: '11px', display: 'block', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Employee Request</span>
-          </div>
+          <img src="/logo.svg" alt="Super Pure Water" style={{ height: '40px', width: 'auto' }} />
         </div>
         {requests.length > 0 && (
           <Badge variant="blue">{requests.length} item{requests.length > 1 ? 's' : ''} selected</Badge>

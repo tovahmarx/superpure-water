@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <!-- Water Droplet -->
+  <defs>
+    <linearGradient id="drop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7EC8E3"/>
+      <stop offset="100%" stop-color="#5BA3D9"/>
+    </linearGradient>
+  </defs>
+  <path d="M28 8 C28 8, 12 30, 12 42 C12 51.5, 19.2 58, 28 58 C36.8 58, 44 51.5, 44 42 C44 30, 28 8, 28 8Z" fill="url(#drop)"/>
+  <ellipse cx="22" cy="35" rx="4" ry="7" fill="rgba(255,255,255,0.3)" transform="rotate(-15 22 35)"/>
+  <!-- SUPER -->
+  <text x="52" y="38" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="bold" font-style="italic" fill="#1B3A7C" letter-spacing="3">SUPER</text>
+  <!-- PURE WATER -->
+  <text x="52" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="bold" font-style="italic" fill="#1B3A7C" letter-spacing="3">PURE WATER</text>
+</svg>
