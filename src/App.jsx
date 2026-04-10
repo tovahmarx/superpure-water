@@ -9,6 +9,7 @@ import './App.css'
 // ============================================================
 const AuthContext = createContext(null)
 const CartContext = createContext(null)
+const CreditContext = createContext(null)
 
 // ============================================================
 // REAL PRODUCT DATA — From Fulfill Engine Super Pure Water Store
@@ -206,6 +207,61 @@ function CartProvider({ children }) {
     <CartContext.Provider value={{ items, addItem, updateQty, removeItem, clearCart, total, count }}>
       {children}
     </CartContext.Provider>
+  )
+}
+
+// ============================================================
+// CREDIT PROVIDER (Kris's store credit from retail sales)
+// ============================================================
+function CreditProvider({ children }) {
+  const [balance, setBalance] = useState(() => {
+    try { return Number(JSON.parse(localStorage.getItem('spw_credit_balance') || '0')) } catch { return 0 }
+  })
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('spw_credit_history') || '[]') } catch { return [] }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('spw_credit_balance', JSON.stringify(balance))
+  }, [balance])
+
+  useEffect(() => {
+    localStorage.setItem('spw_credit_history', JSON.stringify(history))
+  }, [history])
+
+  const addCredit = (amount, description, orderItems) => {
+    const entry = {
+      id: Date.now().toString(),
+      type: 'earned',
+      amount,
+      description,
+      items: orderItems,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    }
+    setBalance(prev => Math.round((prev + amount) * 100) / 100)
+    setHistory(prev => [entry, ...prev])
+  }
+
+  const useCredit = (amount, description, orderItems) => {
+    const used = Math.min(amount, balance)
+    if (used <= 0) return 0
+    const entry = {
+      id: Date.now().toString(),
+      type: 'spent',
+      amount: used,
+      description,
+      items: orderItems,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    }
+    setBalance(prev => Math.round((prev - used) * 100) / 100)
+    setHistory(prev => [entry, ...prev])
+    return used
+  }
+
+  return (
+    <CreditContext.Provider value={{ balance, history, addCredit, useCredit }}>
+      {children}
+    </CreditContext.Provider>
   )
 }
 
@@ -635,7 +691,37 @@ function ProductDetail({ product, onBack, priceType }) {
 // ============================================================
 function CartView({ onBack, priceType }) {
   const cart = useContext(CartContext)
+  const credit = useContext(CreditContext)
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [useStoreCredit, setUseStoreCredit] = useState(true)
+  const [creditEarned, setCreditEarned] = useState(0)
+
+  const isWholesale = priceType === 'wholesale'
+  const creditApplied = isWholesale && useStoreCredit ? Math.min(credit.balance, cart.total) : 0
+  const amountDue = Math.round((cart.total - creditApplied) * 100) / 100
+
+  const handlePlaceOrder = () => {
+    if (isWholesale && creditApplied > 0) {
+      credit.useCredit(creditApplied, `Order: ${cart.items.length} item${cart.items.length > 1 ? 's' : ''}`, cart.items.map(i => ({ name: i.name, qty: i.qty })))
+    }
+    if (!isWholesale) {
+      // Calculate credit earned for Kris: sum of (retail - wholesale) per item
+      const products = loadProducts()
+      let earned = 0
+      cart.items.forEach(item => {
+        const prod = products.find(p => p.id === item.productId)
+        if (prod && prod.retailPrice > 0 && prod.wholesalePrice > 0) {
+          earned += (prod.retailPrice - prod.wholesalePrice) * item.qty
+        }
+      })
+      earned = Math.round(earned * 100) / 100
+      if (earned > 0) {
+        credit.addCredit(earned, `Retail sale: ${cart.items.length} item${cart.items.length > 1 ? 's' : ''} sold`, cart.items.map(i => ({ name: i.name, qty: i.qty })))
+      }
+      setCreditEarned(earned)
+    }
+    setOrderPlaced(true)
+  }
 
   if (orderPlaced) {
     return (
@@ -649,6 +735,11 @@ function CartView({ onBack, priceType }) {
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Order Placed!</h2>
           <p style={{ color: 'var(--gray-500)', marginTop: '8px' }}>Thank you for your order. You will receive a confirmation email shortly.</p>
+          {isWholesale && creditApplied > 0 && (
+            <p style={{ color: 'var(--blue)', fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>
+              {fmt(creditApplied)} store credit applied
+            </p>
+          )}
           <Btn onClick={() => { cart.clearCart(); onBack() }} style={{ marginTop: '24px' }}>Continue Shopping</Btn>
         </div>
       </div>
@@ -715,17 +806,64 @@ function CartView({ onBack, priceType }) {
                 <span style={{ color: 'var(--gray-500)' }}>Subtotal</span>
                 <span style={{ fontWeight: 600 }}>{fmt(cart.total)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <span style={{ color: 'var(--gray-500)' }}>Shipping</span>
                 <span style={{ fontWeight: 600, color: 'var(--green)' }}>Free</span>
               </div>
+
+              {/* Store Credit toggle for wholesale */}
+              {isWholesale && credit.balance > 0 && (
+                <div style={{
+                  padding: '12px', background: 'var(--blue-light)', borderRadius: 'var(--radius-sm)',
+                  marginBottom: '12px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--blue-dark)' }}>Store Credit</p>
+                      <p style={{ fontSize: '12px', color: 'var(--blue)', marginTop: '2px' }}>Available: {fmt(credit.balance)}</p>
+                    </div>
+                    <button
+                      onClick={() => setUseStoreCredit(!useStoreCredit)}
+                      style={{
+                        padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600,
+                        background: useStoreCredit ? 'var(--blue)' : 'var(--white)',
+                        color: useStoreCredit ? 'var(--white)' : 'var(--blue)',
+                        border: useStoreCredit ? 'none' : '1px solid var(--blue)',
+                      }}
+                    >
+                      {useStoreCredit ? 'Applied' : 'Apply'}
+                    </button>
+                  </div>
+                  {useStoreCredit && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,102,255,0.15)' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--blue)' }}>Credit applied</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue)' }}>-{fmt(creditApplied)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '16px', fontWeight: 700 }}>Total</span>
-                <span style={{ fontSize: '20px', fontWeight: 800 }}>{fmt(cart.total)}</span>
+                <span style={{ fontSize: '16px', fontWeight: 700 }}>
+                  {isWholesale && creditApplied > 0 ? 'Amount Due' : 'Total'}
+                </span>
+                <span style={{ fontSize: '20px', fontWeight: 800 }}>{fmt(amountDue)}</span>
               </div>
-              <Btn size="lg" onClick={() => setOrderPlaced(true)} style={{ width: '100%', marginTop: '16px' }}>
-                <CreditCard size={18} /> Place Order
-              </Btn>
+              <button
+                onClick={handlePlaceOrder}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  width: '100%', padding: '16px 28px', marginTop: '16px',
+                  fontSize: '16px', fontWeight: 700, borderRadius: 'var(--radius-md)',
+                  background: 'var(--black)', color: 'var(--white)', border: 'none', cursor: 'pointer',
+                }}
+              >
+                {amountDue <= 0 ? (
+                  <><Check size={18} /> Place Order with Credit</>
+                ) : (
+                  <><CreditCard size={18} /> {isWholesale && creditApplied > 0 ? `Pay ${fmt(amountDue)} with Card` : 'Place Order'}</>
+                )}
+              </button>
             </div>
           </>
         )}
@@ -834,6 +972,7 @@ function OwnerPortal() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
   const cart = useContext(CartContext)
+  const credit = useContext(CreditContext)
 
   if (!user || user.role !== 'owner') return <Navigate to="/login" />
 
@@ -860,7 +999,19 @@ function OwnerPortal() {
             <img src="/logo.svg" alt="Super Pure Water" style={{ height: '40px', width: 'auto' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--gray-500)' }}>Welcome, {user.name}</span>
+            <button
+              onClick={() => setPage('credit')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                background: credit.balance > 0 ? 'var(--green-light)' : 'var(--gray-100)',
+                fontSize: '13px', fontWeight: 700,
+                color: credit.balance > 0 ? 'var(--green)' : 'var(--gray-500)',
+              }}
+            >
+              <DollarSign size={14} />
+              {fmt(credit.balance)} Credit
+            </button>
             <button
               onClick={() => setShowCart(true)}
               style={{
@@ -894,6 +1045,7 @@ function OwnerPortal() {
         <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--gray-200)' }}>
           {[
             { key: 'products', label: 'Products', icon: <Package size={16} /> },
+            { key: 'credit', label: 'Store Credit', icon: <DollarSign size={16} /> },
             { key: 'requests', label: 'Employee Requests', icon: <Users size={16} /> },
             { key: 'orders', label: 'My Orders', icon: <Truck size={16} /> },
           ].map(tab => (
@@ -960,6 +1112,73 @@ function OwnerPortal() {
               ))}
             </div>
           </>
+        )}
+
+        {page === 'credit' && (
+          <div>
+            {/* Credit Balance Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+              borderRadius: 'var(--radius-lg)', padding: '32px', color: 'var(--white)', marginBottom: '24px',
+            }}>
+              <p style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px' }}>Available Store Credit</p>
+              <h2 style={{ fontSize: '42px', fontWeight: 800, letterSpacing: '-0.02em' }}>{fmt(credit.balance)}</h2>
+              <p style={{ fontSize: '13px', opacity: 0.7, marginTop: '8px' }}>
+                Credit is earned automatically when customers purchase from the retail store.
+                Use it to order products for free, or pay the difference with a card.
+              </p>
+            </div>
+
+            {/* Credit History */}
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gray-900)', marginBottom: '12px' }}>Credit History</h3>
+            {credit.history.length === 0 ? (
+              <div style={{
+                textAlign: 'center', padding: '48px', background: 'var(--white)',
+                borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)',
+              }}>
+                <DollarSign size={40} style={{ color: 'var(--gray-300)', margin: '0 auto 12px' }} />
+                <p style={{ fontSize: '15px', fontWeight: 500, color: 'var(--gray-500)' }}>No credit activity yet</p>
+                <p style={{ fontSize: '13px', color: 'var(--gray-400)', marginTop: '4px' }}>Credits will appear here when retail orders are placed.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {credit.history.map(entry => (
+                  <div key={entry.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px', background: 'var(--white)', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--gray-200)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '50%',
+                        background: entry.type === 'earned' ? 'var(--green-light)' : 'var(--blue-light)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {entry.type === 'earned'
+                          ? <Plus size={16} style={{ color: 'var(--green)' }} />
+                          : <Minus size={16} style={{ color: 'var(--blue)' }} />
+                        }
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-900)' }}>
+                          {entry.type === 'earned' ? 'Credit Earned' : 'Credit Used'}
+                        </p>
+                        <p style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                          {entry.description} — {entry.date}
+                        </p>
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: '16px', fontWeight: 700,
+                      color: entry.type === 'earned' ? 'var(--green)' : 'var(--blue)',
+                    }}>
+                      {entry.type === 'earned' ? '+' : '-'}{fmt(entry.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {page === 'requests' && (
@@ -1897,7 +2116,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <AppRoutes />
+          <CreditProvider>
+            <AppRoutes />
+          </CreditProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
