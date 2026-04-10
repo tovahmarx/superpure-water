@@ -515,8 +515,8 @@ function ProductDetail({ product, onBack, priceType }) {
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
           <ArrowLeft size={16} /> Back to products
         </button>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)', alignItems: 'start' }}>
-          <div style={{ position: 'sticky', top: '24px' }}>
+        <div style={{ display: 'flex', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)' }}>
+          <div style={{ flex: '0 0 45%' }}>
             <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
               <img src={currentImage} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
             </div>
@@ -538,7 +538,7 @@ function ProductDetail({ product, onBack, priceType }) {
               </div>
             )}
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <Badge>{product.category}</Badge>
             <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '12px', lineHeight: 1.2, color: 'var(--gray-900)' }}>
               {product.name}
