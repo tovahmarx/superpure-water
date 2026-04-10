@@ -1,8 +1,17 @@
-import { useState, useEffect, createContext, useContext } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu } from 'lucide-react'
+import { useState, useEffect, createContext, useContext, useCallback } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom'
+import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu, Loader } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 import COLOR_IMAGES from './colorImages.js'
 import './App.css'
+
+// ============================================================
+// SUPABASE CLIENT
+// ============================================================
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+)
 
 // ============================================================
 // CONTEXT
@@ -94,7 +103,7 @@ const PRODUCT_VARIANTS = {
   "69ab2e79c22eeedecc02a1f0": { sizes: ["S","M","L","XL","2XL","3XL","4XL"], colors: ["Black"] },
 }
 
-// Load saved pricing from localStorage (persists your markup decisions)
+// Load saved pricing — checks localStorage first (instant), Supabase syncs in background
 function loadProducts() {
   const saved = localStorage.getItem('spw_pricing')
   if (saved) {
@@ -108,12 +117,45 @@ function loadProducts() {
   return INITIAL_PRODUCTS
 }
 
+// Save pricing to both localStorage and Supabase
 function savePricing(products) {
   const pricing = {}
   products.forEach(p => {
     pricing[p.id] = { wholesalePrice: p.wholesalePrice, retailPrice: p.retailPrice }
   })
   localStorage.setItem('spw_pricing', JSON.stringify(pricing))
+
+  // Sync to Supabase in background
+  fetch('/api/pricing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      products: products.map(p => ({
+        product_id: p.id,
+        wholesale_price: p.wholesalePrice,
+        retail_price: p.retailPrice,
+      }))
+    }),
+  }).catch(err => console.warn('Pricing sync failed:', err))
+}
+
+// Sync pricing FROM Supabase (runs once on load to pull latest)
+async function syncPricingFromSupabase() {
+  try {
+    const res = await fetch('/api/pricing')
+    if (!res.ok) return
+    const data = await res.json()
+    if (data && data.length) {
+      const pricing = {}
+      data.forEach(p => {
+        pricing[p.product_id] = {
+          wholesalePrice: Number(p.wholesale_price),
+          retailPrice: Number(p.retail_price),
+        }
+      })
+      localStorage.setItem('spw_pricing', JSON.stringify(pricing))
+    }
+  } catch {}
 }
 
 const DEMO_ORDERS = []
@@ -214,52 +256,69 @@ function CartProvider({ children }) {
 // CREDIT PROVIDER (Kris's store credit from retail sales)
 // ============================================================
 function CreditProvider({ children }) {
-  const [balance, setBalance] = useState(() => {
-    try { return Number(JSON.parse(localStorage.getItem('spw_credit_balance') || '0')) } catch { return 0 }
-  })
-  const [history, setHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('spw_credit_history') || '[]') } catch { return [] }
-  })
+  const [balance, setBalance] = useState(0)
+  const [history, setHistory] = useState([])
+  const [loaded, setLoaded] = useState(false)
 
+  // Load credit data from Supabase
   useEffect(() => {
-    localStorage.setItem('spw_credit_balance', JSON.stringify(balance))
-  }, [balance])
+    async function load() {
+      try {
+        const { data: ledger } = await supabase
+          .from('credit_ledger')
+          .select('*')
+          .order('created_at', { ascending: false })
 
-  useEffect(() => {
-    localStorage.setItem('spw_credit_history', JSON.stringify(history))
-  }, [history])
-
-  const addCredit = (amount, description, orderItems) => {
-    const entry = {
-      id: Date.now().toString(),
-      type: 'earned',
-      amount,
-      description,
-      items: orderItems,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        if (ledger && ledger.length) {
+          let bal = 0
+          ledger.forEach(e => {
+            if (e.type === 'earned') bal += Number(e.amount)
+            else bal -= Number(e.amount)
+          })
+          setBalance(Math.round(bal * 100) / 100)
+          setHistory(ledger.map(e => ({
+            id: e.id,
+            type: e.type,
+            amount: Number(e.amount),
+            description: e.description,
+            items: e.items,
+            date: new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          })))
+        }
+      } catch {}
+      setLoaded(true)
     }
-    setBalance(prev => Math.round((prev + amount) * 100) / 100)
-    setHistory(prev => [entry, ...prev])
-  }
+    load()
+  }, [])
 
-  const useCredit = (amount, description, orderItems) => {
-    const used = Math.min(amount, balance)
-    if (used <= 0) return 0
-    const entry = {
-      id: Date.now().toString(),
-      type: 'spent',
-      amount: used,
-      description,
-      items: orderItems,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    }
-    setBalance(prev => Math.round((prev - used) * 100) / 100)
-    setHistory(prev => [entry, ...prev])
-    return used
-  }
+  const refreshCredit = useCallback(async () => {
+    try {
+      const { data: ledger } = await supabase
+        .from('credit_ledger')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (ledger) {
+        let bal = 0
+        ledger.forEach(e => {
+          if (e.type === 'earned') bal += Number(e.amount)
+          else bal -= Number(e.amount)
+        })
+        setBalance(Math.round(bal * 100) / 100)
+        setHistory(ledger.map(e => ({
+          id: e.id,
+          type: e.type,
+          amount: Number(e.amount),
+          description: e.description,
+          items: e.items,
+          date: new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        })))
+      }
+    } catch {}
+  }, [])
 
   return (
-    <CreditContext.Provider value={{ balance, history, addCredit, useCredit }}>
+    <CreditContext.Provider value={{ balance, history, refreshCredit, loaded }}>
       {children}
     </CreditContext.Provider>
   )
@@ -694,33 +753,44 @@ function CartView({ onBack, priceType }) {
   const credit = useContext(CreditContext)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [useStoreCredit, setUseStoreCredit] = useState(true)
-  const [creditEarned, setCreditEarned] = useState(0)
+  const [checkingOut, setCheckingOut] = useState(false)
 
   const isWholesale = priceType === 'wholesale'
   const creditApplied = isWholesale && useStoreCredit ? Math.min(credit.balance, cart.total) : 0
   const amountDue = Math.round((cart.total - creditApplied) * 100) / 100
 
-  const handlePlaceOrder = () => {
-    if (isWholesale && creditApplied > 0) {
-      credit.useCredit(creditApplied, `Order: ${cart.items.length} item${cart.items.length > 1 ? 's' : ''}`, cart.items.map(i => ({ name: i.name, qty: i.qty })))
-    }
-    if (!isWholesale) {
-      // Calculate credit earned for Kris: sum of (retail - wholesale) per item
-      const products = loadProducts()
-      let earned = 0
-      cart.items.forEach(item => {
-        const prod = products.find(p => p.id === item.productId)
-        if (prod && prod.retailPrice > 0 && prod.wholesalePrice > 0) {
-          earned += (prod.retailPrice - prod.wholesalePrice) * item.qty
-        }
+  const handlePlaceOrder = async () => {
+    setCheckingOut(true)
+    try {
+      const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.items,
+          priceType,
+          creditApplied,
+        }),
       })
-      earned = Math.round(earned * 100) / 100
-      if (earned > 0) {
-        credit.addCredit(earned, `Retail sale: ${cart.items.length} item${cart.items.length > 1 ? 's' : ''} sold`, cart.items.map(i => ({ name: i.name, qty: i.qty })))
+      const data = await res.json()
+
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url
+        return
       }
-      setCreditEarned(earned)
+
+      if (data.success) {
+        // Fully covered by credit — no Stripe needed
+        credit.refreshCredit()
+        setOrderPlaced(true)
+        return
+      }
+
+      alert(data.error || 'Something went wrong')
+    } catch (err) {
+      alert('Checkout failed: ' + err.message)
     }
-    setOrderPlaced(true)
+    setCheckingOut(false)
   }
 
   if (orderPlaced) {
@@ -851,17 +921,21 @@ function CartView({ onBack, priceType }) {
               </div>
               <button
                 onClick={handlePlaceOrder}
+                disabled={checkingOut}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                   width: '100%', padding: '16px 28px', marginTop: '16px',
                   fontSize: '16px', fontWeight: 700, borderRadius: 'var(--radius-md)',
-                  background: 'var(--black)', color: 'var(--white)', border: 'none', cursor: 'pointer',
+                  background: 'var(--black)', color: 'var(--white)', border: 'none',
+                  cursor: checkingOut ? 'wait' : 'pointer', opacity: checkingOut ? 0.7 : 1,
                 }}
               >
-                {amountDue <= 0 ? (
+                {checkingOut ? (
+                  <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</>
+                ) : amountDue <= 0 ? (
                   <><Check size={18} /> Place Order with Credit</>
                 ) : (
-                  <><CreditCard size={18} /> {isWholesale && creditApplied > 0 ? `Pay ${fmt(amountDue)} with Card` : 'Place Order'}</>
+                  <><CreditCard size={18} /> {isWholesale && creditApplied > 0 ? `Pay ${fmt(amountDue)} with Card` : 'Checkout'}</>
                 )}
               </button>
             </div>
@@ -2098,6 +2172,91 @@ function EmployeeRequest() {
 // ============================================================
 // APP ROUTER
 // ============================================================
+// ============================================================
+// ORDER SUCCESS PAGE (after Stripe redirect)
+// ============================================================
+function OrderSuccess() {
+  const [searchParams] = useSearchParams()
+  const [status, setStatus] = useState('loading')
+  const cart = useContext(CartContext)
+  const credit = useContext(CreditContext)
+  const sessionId = searchParams.get('session_id')
+
+  useEffect(() => {
+    if (!sessionId) { setStatus('error'); return }
+    fetch(`/api/order-status?session_id=${sessionId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'paid') {
+          setStatus('success')
+          cart.clearCart()
+          credit.refreshCredit()
+        } else {
+          setStatus('pending')
+        }
+      })
+      .catch(() => setStatus('error'))
+  }, [sessionId])
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gray-50)' }}>
+      <div style={{ textAlign: 'center', padding: '40px', maxWidth: '500px' }}>
+        {status === 'loading' && (
+          <>
+            <Loader size={48} style={{ color: 'var(--blue)', margin: '0 auto 20px', animation: 'spin 1s linear infinite' }} />
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Confirming your order...</h2>
+          </>
+        )}
+        {status === 'success' && (
+          <>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%', background: 'var(--green-light)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
+            }}>
+              <Check size={32} style={{ color: 'var(--green)' }} />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Order Confirmed!</h2>
+            <p style={{ color: 'var(--gray-500)', marginTop: '8px' }}>Thank you for your purchase. You will receive a confirmation email shortly.</p>
+            <Link to="/" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: '14px 28px', marginTop: '24px', fontSize: '15px', fontWeight: 700,
+              borderRadius: 'var(--radius-md)', background: 'var(--black)', color: 'var(--white)',
+            }}>
+              Continue Shopping
+            </Link>
+          </>
+        )}
+        {status === 'error' && (
+          <>
+            <X size={48} style={{ color: 'var(--red)', margin: '0 auto 20px' }} />
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Something went wrong</h2>
+            <p style={{ color: 'var(--gray-500)', marginTop: '8px' }}>Please contact support if you were charged.</p>
+            <Link to="/" style={{
+              display: 'inline-flex', padding: '14px 28px', marginTop: '24px', fontSize: '15px', fontWeight: 700,
+              borderRadius: 'var(--radius-md)', background: 'var(--black)', color: 'var(--white)',
+            }}>
+              Back to Store
+            </Link>
+          </>
+        )}
+        {status === 'pending' && (
+          <>
+            <Loader size={48} style={{ color: 'var(--amber)', margin: '0 auto 20px', animation: 'spin 1s linear infinite' }} />
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Payment Processing</h2>
+            <p style={{ color: 'var(--gray-500)', marginTop: '8px' }}>Your payment is still being processed. Check your email for confirmation.</p>
+            <Link to="/" style={{
+              display: 'inline-flex', padding: '14px 28px', marginTop: '24px', fontSize: '15px', fontWeight: 700,
+              borderRadius: 'var(--radius-md)', background: 'var(--black)', color: 'var(--white)',
+            }}>
+              Back to Store
+            </Link>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -2106,6 +2265,7 @@ function AppRoutes() {
       <Route path="/wholesale" element={<OwnerPortal />} />
       <Route path="/admin" element={<AdminPortal />} />
       <Route path="/request" element={<EmployeeRequest />} />
+      <Route path="/order-success" element={<OrderSuccess />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
