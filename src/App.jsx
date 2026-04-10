@@ -164,7 +164,13 @@ function AuthProvider({ children }) {
 // CART PROVIDER
 // ============================================================
 function CartProvider({ children }) {
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('spw_cart') || '[]') } catch { return [] }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('spw_cart', JSON.stringify(items))
+  }, [items])
 
   const addItem = (product, qty = 1, priceType = 'retail') => {
     const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
@@ -515,8 +521,8 @@ function ProductDetail({ product, onBack, priceType }) {
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
           <ArrowLeft size={16} /> Back to products
         </button>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)' }}>
-          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)', alignItems: 'start' }}>
+          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)', position: 'sticky', top: '24px' }}>
             <img src={currentImage} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
           </div>
           <div>
