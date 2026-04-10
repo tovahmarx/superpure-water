@@ -51,6 +51,47 @@ const INITIAL_PRODUCTS = [
   { id: "69ab2e79c22eeedecc02a1f0", catalogProductId: "CC1717", name: "Comfort Colors 1717 Tee", description: "Garment-dyed tee with that perfectly broken-in feel. Fully customizable with Super Pure Water design.", image: "https://images-api.printify.com/mockup/69ab2e79c22eeedecc02a1f0/73204/98445/comfort-colors-1717.jpg?camera_label=front", category: "Tees", costPrice: 15.56, wholesalePrice: 0, retailPrice: 0, sku: "CC1717-P", source: "Printify", active: true },
 ]
 
+// ============================================================
+// PRODUCT VARIANTS — Sizes & Colors from FE + Printify APIs
+// ============================================================
+const PRODUCT_VARIANTS = {
+  // FE Products
+  "65775645-66b3-4a5b-833a-9cec72ab20a1": { sizes: ["X-Small","Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black","True Navy","Graphite"] },
+  "94d1ffac-cd30-4115-8395-3522405aa10d": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Quiet Shade","High Risk Red","Lapis Blue"] },
+  "3de311b9-8f1d-4264-920d-3ca62893c4f6": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large"], colors: ["Team Anthracite","Team Black","Team Navy","Team Scarlet"] },
+  "65e52044-05d9-4e61-ad8e-eaacc615d7c3": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large"], colors: ["Black","Cardinal","Dark Green","Maroon","Navy","Purple","Rock","Royal","Stealth","True Red"] },
+  "07460ba0-ca8f-49e9-bc42-fb97fdca50c7": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large"], colors: ["Black","Burnt Orange","Dark Green","Maroon","Navy","Royal","Stealth","Steel","True Red","White"] },
+  "7a068fc5-0f94-465a-905c-158f65c59ccd": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Athletic Heather","Dark Heather Grey","Jet Black","Navy"] },
+  "b70f4613-f2d7-4657-a8b0-774e34aaa336": { sizes: ["X-Small","Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Light Heather Grey","Heathered Charcoal","Black","New Navy"] },
+  "d4bcad88-d6e4-410a-82a6-ffd7b9032894": { sizes: ["X-Small","Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black/ Deep Red","Black/ White","Iron Grey/ White","True Navy/ White"] },
+  "b261913e-84b3-4fe1-8a14-5de66fa0a441": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black/ White","Columbia Blue/ White","Burnt Orange/ White","Kelly/ White","Graphite/ White","Forest/ White","Navy/ White","Maroon/ White","Red/ White","Purple/ White","White/ Black","Royal/ White"] },
+  "e1cde862-44ee-4b07-b05e-f0477f7bb07f": { sizes: ["X-Small","Small","Medium","Large","X-Large","XX-Large","XXX-Large"], colors: ["Black","Navy","Charcoal Heather","Grey Heather","Army","White","Royal","Red","Maroon","Saddle","Slate Blue","Bone","Sandstone","Alpine Green","Dusty Pink","Lavender","Mint","Storm Blue","Dusty Sage","Cement","Plum","Brown"] },
+  "c28036eb-ab06-4f74-b7f5-18e1526003c0": { sizes: ["S/M","M/L","L/XL"], colors: ["White/ White","Cool Grey/ White","Team Red/ White","Navy/ White","Gym Blue/ White","Black/ White","Black/ Game Royal","Black/ Black","Anthracite/ White"] },
+  "40a827e5-4d5d-42a6-8c52-0764c36df32d": { sizes: ["X-Small","Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["White","Black","Navy","Cool Grey","Game Royal","Anthracite","University Red","Valor Blue","Gorge Green","Gym Blue","Brilliant Orange","Tidal Blue","Vivid Pink","Lucid Green","Court Purple","Blue Tint","Mint","Urban Lilac","Varsity Maize","Team Red"] },
+  "2ebe2108-6ec6-46a4-9e54-5cac7386d253": { sizes: ["Small","Medium","Large","X-Large","XX-Large"], colors: ["Black","White","Navy","Cool Grey","Vivid Pink","Valor Blue","Anthracite","University Red","Tidal Blue","Gorge Green","Game Royal","Court Purple","Gym Blue","Brilliant Orange","Lucid Green","Blue Tint","Mint","Urban Lilac","Varsity Maize","Team Red"] },
+  "ed197e7c-16f7-43b1-b4d4-9c74ad80ab0b": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black/ White","Team Grey Four/ White","Team Power Red/ White","Team Royal Blue/ White"] },
+  "366b8c1a-d5df-444d-8588-af62fd7b3f1b": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black","Khaki","Navy","Stealth"] },
+  "9d1ba28f-4b40-464e-9ed9-d4c8971cc93b": { sizes: ["Small","Medium","Large","X-Large","XX-Large"], colors: ["Athletic Grey","Athletic Royal"] },
+  "bf2c31a9-670e-4d58-a19f-7754720d5b59": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large"], colors: ["Black","Navy","Oxford Grey"] },
+  "43121382-86a5-4629-82cd-83eb34373088": { sizes: ["Small","Medium","Large","X-Large","XX-Large","XXX-Large"], colors: ["Black/ White"] },
+  "72119eb5-d9f2-41e4-bf2d-5fa4a11f1a5c": { sizes: [], colors: ["Natural/ Black","Red","Natural/ Royal","Natural/ Forest"] },
+  "8762a9d5-b5ba-4cee-ac88-4c7c638021df": { sizes: [], colors: ["Blue","Black","Charcoal","Green","Navy","Red"] },
+  "474d12a6-59f2-4b93-b2c9-345c81790b44": { sizes: [], colors: ["Black","White","Blue","Lime","Orange","Navy","Red"] },
+  "6bb7b0cb-b77e-4ce5-809f-294699194199": { sizes: [], colors: ["Black","Royal Blue"] },
+  "91662cd6-18dd-4793-b743-b711b7c2bcb8": { sizes: [], colors: ["Deep Black","River Blue Navy","Sahara","Storm Grey"] },
+  "9a50908e-405f-4eb6-931f-fe8521fecd29": { sizes: [], colors: ["Black","Charcoal/ Black","Charcoal/ White","Navy/ White","Navy","Red/ Black","Red","Royal/ White","White","Black/ White"] },
+  "dad39c44-2032-49d7-b668-13d9dbd3f6a6": { sizes: [], colors: ["Black","White","Brown","Charcoal","Forest Green","Gold","Grey","Khaki","Maroon","Navy","Olive","Red","Royal","Stone"] },
+  "3787264c-35c4-43e0-bc65-23e543ed9006": { sizes: [], colors: ["Black/ Black","Navy/ Black","Red/ Black","Royal/ Black"] },
+  "9871d311-2b4f-49f2-a94b-d303478cae98": { sizes: ["XS","Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black","White","Navy","Red","Royal","Dark Green","Maroon","Steel Grey","Carolina Blue","Teal Green","Bright Purple","Brilliant Blue","Gusty Grey","Lime","Neon Orange","Neon Yellow","Pink Raspberry","Parcel Blue"] },
+  "f4b9d451-ca8f-4360-b52a-8cdd8c2925fa": { sizes: ["X-Small","Small","Medium","Large","X-Large","XX-Large","XXX-Large","XXXX-Large"], colors: ["Black","Engine Red","Grey Smoke","Skydiver Blue","True Navy"] },
+  // Printify Products
+  "69abc874a028393ce202a853": { sizes: ["XS","S","M","L","XL","2XL"], colors: ["White","Black","Gold","Forest","Athletic Heather","True Royal","Navy","Team Purple","Maroon"] },
+  "69abc732b360648baa01cd2d": { sizes: ["S","M","L","XL","2XL","3XL","4XL","5XL"], colors: ["Ash","Black","Charcoal","Dark Heather","Forest Green","Graphite Heather","Heather Navy","Indigo Blue","Light Blue","Military Green","Sand","Sport Grey","White"] },
+  "69ab32d5d959867b0506f74a": { sizes: ["XS","S","M","L","XL","2XL","3XL","4XL","5XL"], colors: ["Black"] },
+  "69ab2f6fb360648baa01b3b3": { sizes: ["XS","S","M","L","XL","2XL","3XL","4XL","5XL"], colors: ["CVC Black"] },
+  "69ab2e79c22eeedecc02a1f0": { sizes: ["S","M","L","XL","2XL","3XL","4XL"], colors: ["Black"] },
+}
+
 // Load saved pricing from localStorage (persists your markup decisions)
 function loadProducts() {
   const saved = localStorage.getItem('spw_pricing')
@@ -126,31 +167,28 @@ function CartProvider({ children }) {
 
   const addItem = (product, qty = 1, priceType = 'retail') => {
     const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
+    const color = product.selectedColor || ''
+    const size = product.selectedSize || ''
+    const key = `${product.id}-${color}-${size}-${priceType}`
     setItems(prev => {
-      const existing = prev.find(i => i.productId === product.id && i.priceType === priceType)
+      const existing = prev.find(i => i.key === key)
       if (existing) {
-        return prev.map(i =>
-          i.productId === product.id && i.priceType === priceType
-            ? { ...i, qty: i.qty + qty }
-            : i
-        )
+        return prev.map(i => i.key === key ? { ...i, qty: i.qty + qty } : i)
       }
-      return [...prev, { productId: product.id, name: product.name, image: product.image, price, qty, priceType }]
+      return [...prev, { key, productId: product.id, name: product.name, image: product.image, price, qty, priceType, color, size }]
     })
   }
 
-  const updateQty = (productId, priceType, qty) => {
+  const updateQty = (key, qty) => {
     if (qty <= 0) {
-      setItems(prev => prev.filter(i => !(i.productId === productId && i.priceType === priceType)))
+      setItems(prev => prev.filter(i => i.key !== key))
     } else {
-      setItems(prev => prev.map(i =>
-        i.productId === productId && i.priceType === priceType ? { ...i, qty } : i
-      ))
+      setItems(prev => prev.map(i => i.key === key ? { ...i, qty } : i))
     }
   }
 
-  const removeItem = (productId, priceType) => {
-    setItems(prev => prev.filter(i => !(i.productId === productId && i.priceType === priceType)))
+  const removeItem = (key) => {
+    setItems(prev => prev.filter(i => i.key !== key))
   }
 
   const clearCart = () => setItems([])
@@ -414,10 +452,10 @@ function CustomerStore() {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation()
-                    cart.addItem(product, 1, 'retail')
+                    setSelectedProduct(product)
                   }}
                 >
-                  Add to Cart
+                  Select Options
                 </Btn>
               </div>
             </div>
@@ -444,13 +482,32 @@ function CustomerStore() {
 function ProductDetail({ product, onBack, priceType }) {
   const cart = useContext(CartContext)
   const [qty, setQty] = useState(1)
+  const variants = PRODUCT_VARIANTS[product.id] || { sizes: [], colors: [] }
+  const [selectedColor, setSelectedColor] = useState(variants.colors[0] || '')
+  const [selectedSize, setSelectedSize] = useState(variants.sizes[0] || '')
+  const [added, setAdded] = useState(false)
   const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
+
+  const canAdd = (!variants.colors.length || selectedColor) && (!variants.sizes.length || selectedSize)
+
+  const handleAdd = () => {
+    if (!canAdd) return
+    cart.addItem({ ...product, selectedColor, selectedSize }, qty, priceType)
+    setAdded(true)
+    setTimeout(() => setAdded(false), 2000)
+  }
+
+  const selectStyle = (isSelected) => ({
+    padding: '8px 16px', fontSize: '13px', fontWeight: 600,
+    borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'all 0.15s',
+    border: isSelected ? '2px solid var(--blue)' : '1px solid var(--gray-200)',
+    background: isSelected ? 'var(--blue-light)' : 'var(--white)',
+    color: isSelected ? 'var(--blue)' : 'var(--gray-700)',
+  })
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      <div style={{
-        maxWidth: '900px', margin: '0 auto', padding: '40px 24px',
-      }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
           <ArrowLeft size={16} /> Back to products
         </button>
@@ -468,12 +525,46 @@ function ProductDetail({ product, onBack, priceType }) {
             </p>
             <div style={{ marginTop: '20px' }}>
               <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--gray-900)' }}>{fmt(price)}</span>
-              {priceType === 'wholesale' && (
+              {priceType === 'wholesale' && product.retailPrice > 0 && (
                 <span style={{ fontSize: '14px', color: 'var(--gray-400)', marginLeft: '8px', textDecoration: 'line-through' }}>
                   {fmt(product.retailPrice)}
                 </span>
               )}
             </div>
+
+            {/* Color Selector */}
+            {variants.colors.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>
+                  Color — {selectedColor}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {variants.colors.map(c => (
+                    <button key={c} onClick={() => setSelectedColor(c)} style={selectStyle(selectedColor === c)}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Size Selector */}
+            {variants.sizes.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>
+                  Size — {selectedSize}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {variants.sizes.map(s => (
+                    <button key={s} onClick={() => setSelectedSize(s)} style={selectStyle(selectedSize === s)}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quantity + Add to Cart */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '24px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', border: '1px solid var(--gray-200)',
@@ -487,10 +578,25 @@ function ProductDetail({ product, onBack, priceType }) {
                   <Plus size={16} />
                 </button>
               </div>
-              <Btn size="lg" onClick={() => { cart.addItem(product, qty, priceType); onBack() }} style={{ flex: 1 }}>
-                <ShoppingCart size={18} /> Add to Cart — {fmt(price * qty)}
+              <Btn
+                size="lg"
+                onClick={handleAdd}
+                disabled={!canAdd}
+                style={{
+                  flex: 1,
+                  opacity: canAdd ? 1 : 0.5,
+                  background: added ? 'var(--green)' : undefined,
+                }}
+              >
+                {added ? (
+                  <><Check size={18} /> Added!</>
+                ) : (
+                  <><ShoppingCart size={18} /> Add to Cart — {fmt(price * qty)}</>
+                )}
               </Btn>
             </div>
+
+            {/* Product Info */}
             <div style={{ marginTop: '24px', padding: '16px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--gray-600)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span>SKU</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.sku}</span>
@@ -500,9 +606,7 @@ function ProductDetail({ product, onBack, priceType }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Availability</span>
-                <span style={{ fontWeight: 600, color: product.stock > 0 ? 'var(--green)' : 'var(--red)' }}>
-                  {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                </span>
+                <span style={{ fontWeight: 600, color: 'var(--green)' }}>In Stock</span>
               </div>
             </div>
           </div>
@@ -555,31 +659,35 @@ function CartView({ onBack, priceType }) {
           <>
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {cart.items.map(item => (
-                <div key={item.productId + item.priceType} style={{
+                <div key={item.key} style={{
                   display: 'flex', alignItems: 'center', gap: '16px', padding: '16px',
                   background: 'var(--white)', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)',
                 }}>
                   <img src={item.image} alt="" style={{ width: '64px', height: '64px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-900)' }}>{item.name}</p>
-                    <p style={{ fontSize: '13px', color: 'var(--gray-500)' }}>{fmt(item.price)} each</p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
+                      {item.color && <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--gray-500)', background: 'var(--gray-50)', padding: '2px 8px', borderRadius: '4px' }}>{item.color}</span>}
+                      {item.size && <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--gray-500)', background: 'var(--gray-50)', padding: '2px 8px', borderRadius: '4px' }}>{item.size}</span>}
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '2px' }}>{fmt(item.price)} each</p>
                   </div>
                   <div style={{
                     display: 'flex', alignItems: 'center', border: '1px solid var(--gray-200)',
                     borderRadius: 'var(--radius-sm)', overflow: 'hidden',
                   }}>
-                    <button onClick={() => cart.updateQty(item.productId, item.priceType, item.qty - 1)} style={{ padding: '6px 10px' }}>
+                    <button onClick={() => cart.updateQty(item.key, item.qty - 1)} style={{ padding: '6px 10px' }}>
                       <Minus size={14} />
                     </button>
                     <span style={{ padding: '6px 12px', fontWeight: 600, fontSize: '13px' }}>{item.qty}</span>
-                    <button onClick={() => cart.updateQty(item.productId, item.priceType, item.qty + 1)} style={{ padding: '6px 10px' }}>
+                    <button onClick={() => cart.updateQty(item.key, item.qty + 1)} style={{ padding: '6px 10px' }}>
                       <Plus size={14} />
                     </button>
                   </div>
                   <span style={{ fontSize: '15px', fontWeight: 700, minWidth: '70px', textAlign: 'right' }}>
                     {fmt(item.price * item.qty)}
                   </span>
-                  <button onClick={() => cart.removeItem(item.productId, item.priceType)} style={{ color: 'var(--gray-400)' }}>
+                  <button onClick={() => cart.removeItem(item.key)} style={{ color: 'var(--gray-400)' }}>
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -831,10 +939,10 @@ function OwnerPortal() {
                     </div>
                     <Btn
                       size="sm"
-                      onClick={(e) => { e.stopPropagation(); cart.addItem(p, 1, 'wholesale') }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedProduct(p) }}
                       style={{ width: '100%', marginTop: '12px' }}
                     >
-                      Add to Cart
+                      Select Options
                     </Btn>
                   </div>
                 </div>
