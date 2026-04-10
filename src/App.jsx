@@ -225,7 +225,7 @@ function CartProvider({ children }) {
       if (existing) {
         return prev.map(i => i.key === key ? { ...i, qty: i.qty + qty } : i)
       }
-      return [...prev, { key, productId: product.id, name: product.name, image: product.image, price, qty, priceType, color, size }]
+      return [...prev, { key, productId: product.id, name: product.name, image: product.image, price, qty, priceType, color, size, source: product.source }]
     })
   }
 
@@ -754,10 +754,28 @@ function CartView({ onBack, priceType }) {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [useStoreCredit, setUseStoreCredit] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
+  const [shipping, setShipping] = useState({ total: 0, breakdown: null, loading: true })
 
   const isWholesale = priceType === 'wholesale'
-  const creditApplied = isWholesale && useStoreCredit ? Math.min(credit.balance, cart.total) : 0
-  const amountDue = Math.round((cart.total - creditApplied) * 100) / 100
+  const orderTotal = Math.round((cart.total + shipping.total) * 100) / 100
+  const creditApplied = isWholesale && useStoreCredit ? Math.min(credit.balance, orderTotal) : 0
+  const amountDue = Math.round((orderTotal - creditApplied) * 100) / 100
+
+  // Fetch shipping when cart changes
+  useEffect(() => {
+    if (cart.items.length === 0) { setShipping({ total: 0, breakdown: null, loading: false }); return }
+    let cancelled = false
+    setShipping(s => ({ ...s, loading: true }))
+    fetch('/api/shipping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: cart.items }),
+    })
+      .then(r => r.json())
+      .then(data => { if (!cancelled) setShipping({ total: data.total || 0, breakdown: data.breakdown, loading: false }) })
+      .catch(() => { if (!cancelled) setShipping({ total: 0, breakdown: null, loading: false }) })
+    return () => { cancelled = true }
+  }, [cart.items])
 
   const handlePlaceOrder = async () => {
     setCheckingOut(true)
@@ -769,6 +787,7 @@ function CartView({ onBack, priceType }) {
           items: cart.items,
           priceType,
           creditApplied,
+          shipping: shipping.total,
         }),
       })
       const data = await res.json()
@@ -878,8 +897,16 @@ function CartView({ onBack, priceType }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <span style={{ color: 'var(--gray-500)' }}>Shipping</span>
-                <span style={{ fontWeight: 600, color: 'var(--green)' }}>Free</span>
+                <span style={{ fontWeight: 600, color: shipping.loading ? 'var(--gray-400)' : shipping.total > 0 ? 'var(--gray-900)' : 'var(--green)' }}>
+                  {shipping.loading ? 'Calculating...' : shipping.total > 0 ? fmt(shipping.total) : 'Free'}
+                </span>
               </div>
+              {shipping.breakdown && (shipping.breakdown.fulfillEngine || shipping.breakdown.printify) && (
+                <div style={{ marginBottom: '12px', paddingLeft: '8px', fontSize: '12px', color: 'var(--gray-400)' }}>
+                  {shipping.breakdown.fulfillEngine && <div>{shipping.breakdown.fulfillEngine.label}: {fmt(shipping.breakdown.fulfillEngine.amount)}</div>}
+                  {shipping.breakdown.printify && <div>{shipping.breakdown.printify.label}: {fmt(shipping.breakdown.printify.amount)}</div>}
+                </div>
+              )}
 
               {/* Store Credit toggle for wholesale */}
               {isWholesale && credit.balance > 0 && (
@@ -983,7 +1010,6 @@ function LoginPage() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img src="/logo.svg" alt="Super Pure Water" style={{ height: '56px', width: 'auto', margin: '0 auto 12px', display: 'block' }} />
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--gray-900)' }}>Super Pure Water</h1>
           <p style={{ fontSize: '14px', color: 'var(--gray-500)', marginTop: '4px' }}>Sign in to your portal</p>
         </div>
         <form onSubmit={handleSubmit}>

@@ -13,14 +13,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { items, priceType, creditApplied, customerEmail } = req.body
+    const { items, priceType, creditApplied, customerEmail, shipping = 0 } = req.body
 
     if (!items || !items.length) {
       return res.status(400).json({ error: 'No items provided' })
     }
 
     const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0)
-    const amountDue = Math.round((subtotal - (creditApplied || 0)) * 100) / 100
+    const total = Math.round((subtotal + shipping) * 100) / 100
+    const amountDue = Math.round((total - (creditApplied || 0)) * 100) / 100
 
     // If fully covered by credit, skip Stripe and create order directly
     if (amountDue <= 0) {
@@ -29,6 +30,7 @@ export default async function handler(req, res) {
         .insert({
           price_type: priceType,
           subtotal,
+          shipping,
           credit_applied: creditApplied || 0,
           amount_charged: 0,
           status: 'processing',
@@ -71,6 +73,18 @@ export default async function handler(req, res) {
       },
       quantity: item.qty,
     }))
+
+    // Add shipping as a line item if > 0
+    if (shipping > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'Shipping' },
+          unit_amount: Math.round(shipping * 100),
+        },
+        quantity: 1,
+      })
+    }
 
     // If partial credit, add a discount
     const discounts = []
