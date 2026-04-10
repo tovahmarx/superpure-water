@@ -587,7 +587,7 @@ function ProductDetail({ product, onBack, priceType }) {
               </div>
             )}
 
-            {/* Quantity + Add to Cart */}
+            {/* Quantity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '24px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', border: '1px solid var(--gray-200)',
@@ -601,39 +601,28 @@ function ProductDetail({ product, onBack, priceType }) {
                   <Plus size={16} />
                 </button>
               </div>
-              <Btn
-                size="lg"
-                onClick={handleAdd}
-                disabled={!canAdd}
-                style={{
-                  flex: 1,
-                  opacity: canAdd ? 1 : 0.5,
-                  background: added ? 'var(--green)' : undefined,
-                }}
-              >
-                {added ? (
-                  <><Check size={18} /> Added!</>
-                ) : (
-                  <><ShoppingCart size={18} /> Add to Cart — {fmt(price * qty)}</>
-                )}
-              </Btn>
             </div>
 
-            {/* Product Info — hidden from customers */}
-            {priceType === 'wholesale' && (
-              <div style={{ marginTop: '24px', padding: '16px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--gray-600)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>SKU</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.sku}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Source</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.source}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Availability</span>
-                  <span style={{ fontWeight: 600, color: 'var(--green)' }}>In Stock</span>
-                </div>
-              </div>
-            )}
+            {/* Add to Cart Button */}
+            <button
+              onClick={handleAdd}
+              disabled={!canAdd}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                width: '100%', padding: '16px 28px', marginTop: '16px',
+                fontSize: '16px', fontWeight: 700, borderRadius: 'var(--radius-md)',
+                background: added ? 'var(--green)' : 'var(--black)',
+                color: 'var(--white)', border: 'none', cursor: 'pointer',
+                opacity: canAdd ? 1 : 0.5,
+              }}
+            >
+              {added ? (
+                <><Check size={18} /> Added!</>
+              ) : (
+                <><ShoppingCart size={18} /> Add to Cart — {fmt(price * qty)}</>
+              )}
+            </button>
+
           </div>
         </div>
       </div>
