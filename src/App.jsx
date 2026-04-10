@@ -10,130 +10,70 @@ const AuthContext = createContext(null)
 const CartContext = createContext(null)
 
 // ============================================================
-// MOCK DATA — Replace with Supabase later
+// REAL PRODUCT DATA — From Fulfill Engine Super Pure Water Store
+// Campaign: 1ee36d04-dcd2-4568-8b37-794f077a1f5f
+// Account: act-9679744
 // ============================================================
-const DEMO_PRODUCTS = [
-  {
-    id: 'spw-001',
-    name: 'Super Pure Water - 24 Pack (16.9oz)',
-    description: 'Premium purified water, 24 bottles per case. Perfect for events, offices, and retail.',
-    image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=600&h=600&fit=crop',
-    category: 'Cases',
-    costPrice: 3.20,
-    wholesalePrice: 5.50,
-    retailPrice: 8.99,
-    sku: 'SPW-24-16',
-    stock: 500,
-    source: 'Fulfill Engine',
-    active: true,
-  },
-  {
-    id: 'spw-002',
-    name: 'Super Pure Water - 12 Pack (1 Liter)',
-    description: 'Premium purified water, 12 one-liter bottles per case. Great for gyms and wellness centers.',
-    image: 'https://images.unsplash.com/photo-1560023907-5f339617ea30?w=600&h=600&fit=crop',
-    category: 'Cases',
-    costPrice: 4.80,
-    wholesalePrice: 8.00,
-    retailPrice: 13.99,
-    sku: 'SPW-12-1L',
-    stock: 350,
-    source: 'Fulfill Engine',
-    active: true,
-  },
-  {
-    id: 'spw-003',
-    name: 'Super Pure Water - 6 Pack (1 Gallon)',
-    description: 'Premium purified water, 6 gallon jugs per case. Ideal for home delivery and offices.',
-    image: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=600&h=600&fit=crop',
-    category: 'Bulk',
-    costPrice: 7.50,
-    wholesalePrice: 12.00,
-    retailPrice: 19.99,
-    sku: 'SPW-6-GAL',
-    stock: 200,
-    source: 'Fulfill Engine',
-    active: true,
-  },
-  {
-    id: 'spw-004',
-    name: 'Super Pure Water Branded T-Shirt',
-    description: 'Premium cotton tee with Super Pure Water logo. Available in S-XXL.',
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop',
-    category: 'Merch',
-    costPrice: 6.50,
-    wholesalePrice: 12.00,
-    retailPrice: 24.99,
-    sku: 'SPW-TEE-WHT',
-    stock: 150,
-    source: 'Printify',
-    active: true,
-  },
-  {
-    id: 'spw-005',
-    name: 'Super Pure Water Branded Cap',
-    description: 'Embroidered snapback cap with Super Pure Water logo.',
-    image: 'https://images.unsplash.com/photo-1588850561407-ed78c334e67a?w=600&h=600&fit=crop',
-    category: 'Merch',
-    costPrice: 4.00,
-    wholesalePrice: 8.00,
-    retailPrice: 18.99,
-    sku: 'SPW-CAP-BLK',
-    stock: 200,
-    source: 'Printify',
-    active: true,
-  },
-  {
-    id: 'spw-006',
-    name: 'Super Pure Water Stainless Bottle',
-    description: '32oz insulated stainless steel water bottle with Super Pure Water branding.',
-    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&h=600&fit=crop',
-    category: 'Merch',
-    costPrice: 8.00,
-    wholesalePrice: 15.00,
-    retailPrice: 29.99,
-    sku: 'SPW-SBOT-32',
-    stock: 100,
-    source: 'Printify',
-    active: true,
-  },
+const INITIAL_PRODUCTS = [
+  { id: "65775645-66b3-4a5b-833a-9cec72ab20a1", catalogProductId: "PST74", name: "Sport-Tek Wind Pant", description: "Whether worn alone or with a Sport-Tek wind shirt, these water-repellent pants provide lightweight protection.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-6412650-front-black-product.png", category: "Pants", costPrice: 16.70, wholesalePrice: 0, retailPrice: 0, sku: "PST74", source: "Fulfill Engine", active: true },
+  { id: "94d1ffac-cd30-4115-8395-3522405aa10d", catalogProductId: "596807", name: "Puma Golf Men's Icon Quarter-Zip", description: "4.94 oz., 100% polyester moisture-wicking 4-way stretch ultra-lightweight contrast covered reverse coil zipper.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-9090780-front-quiet-shade-product.png", category: "Quarter-Zips", costPrice: 27.75, wholesalePrice: 0, retailPrice: 0, sku: "596807", source: "Fulfill Engine", active: true },
+  { id: "3de311b9-8f1d-4264-920d-3ca62893c4f6", catalogProductId: "CN9492", name: "Nike Therma-FIT 1/4-Zip Fleece", description: "Year-round workout essential with incredibly warm, insulating Therma-FIT fabric which breathes and manages moisture.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-1223464-front-team-anthracite-product.png", category: "Quarter-Zips", costPrice: 39.75, wholesalePrice: 0, retailPrice: 0, sku: "CN9492", source: "Fulfill Engine", active: true },
+  { id: "65e52044-05d9-4e61-ad8e-eaacc615d7c3", catalogProductId: "TS7X2M", name: "Russell Athletic Dri-Power Essential 10\" Shorts", description: "4.1 oz., 100% polyester Dri-Power moisture management with odor protection and covered elastic waistband.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-8309125-front-black-product.png", category: "Shorts", costPrice: 12.20, wholesalePrice: 0, retailPrice: 0, sku: "TS7X2M", source: "Fulfill Engine", active: true },
+  { id: "07460ba0-ca8f-49e9-bc42-fb97fdca50c7", catalogProductId: "651AFM", name: "Russell Athletic 9\" Dri-Power Mesh Shorts", description: "2.8 oz., 100% polyester mesh Dri-Power moisture management with covered elastic waistband.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-3303865-front-black-product.png", category: "Shorts", costPrice: 11.50, wholesalePrice: 0, retailPrice: 0, sku: "651AFM", source: "Fulfill Engine", active: true },
+  { id: "7a068fc5-0f94-465a-905c-158f65c59ccd", catalogProductId: "PC78J", name: "Port & Company Core Fleece Jogger", description: "Cozy joggers in our core weight. 7.8-ounce, 50/50 cotton/poly fleece with removable tag.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-4315778-front-athletic-heather-product.png", category: "Pants", costPrice: 11.05, wholesalePrice: 0, retailPrice: 0, sku: "PC78J", source: "Fulfill Engine", active: true },
+  { id: "b70f4613-f2d7-4657-a8b0-774e34aaa336", catalogProductId: "DT6107", name: "District V.I.T. Fleece Jogger", description: "An ideal canvas for decorators, these soft joggers are everything and more at an unbeatable value.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-9455438-front-light-heather-grey-product.png", category: "Pants", costPrice: 14.35, wholesalePrice: 0, retailPrice: 0, sku: "DT6107", source: "Fulfill Engine", active: true },
+  { id: "d4bcad88-d6e4-410a-82a6-ffd7b9032894", catalogProductId: "ST443", name: "Sport-Tek Club 1/4-Zip Pullover", description: "4.4-ounce, 100% recycled polyester interlock with PosiCharge technology.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-7648137-front-black--deep-red-product.png", category: "Quarter-Zips", costPrice: 10.75, wholesalePrice: 0, retailPrice: 0, sku: "ST443", source: "Fulfill Engine", active: true },
+  { id: "b261913e-84b3-4fe1-8a14-5de66fa0a441", catalogProductId: "426500", name: "Badger Sport On The Rise 1/4 Zip Pullover", description: "A lightweight quarter zip built for teams, featuring moisture-wicking fabric and forward shoulder seams.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-894689-front-black--white-product.png", category: "Quarter-Zips", costPrice: 11.70, wholesalePrice: 0, retailPrice: 0, sku: "426500", source: "Fulfill Engine", active: true },
+  { id: "e1cde862-44ee-4b07-b05e-f0477f7bb07f", catalogProductId: "IND4000", name: "Independent Trading Co. Heavyweight Hoodie", description: "80/20 cotton/polyester blend 3-end fleece with 100% cotton face, generous fit, fleece lined hood.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-7713044-front-tiger-camo-product.png", category: "Hoodies", costPrice: 28.10, wholesalePrice: 0, retailPrice: 0, sku: "IND4000", source: "Fulfill Engine", active: true },
+  { id: "c28036eb-ab06-4f74-b7f5-18e1526003c0", catalogProductId: "NKAO9293", name: "Nike Stretch-to-Fit Mesh Back Cap", description: "Comfort, style and function converge. 83/14/3 nylon/cotton/spandex, structured, mid-profile.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-4985775-front-white--white-product.png", category: "Hats", costPrice: 17.40, wholesalePrice: 0, retailPrice: 0, sku: "NKAO9293", source: "Fulfill Engine", active: true },
+  { id: "40a827e5-4d5d-42a6-8c52-0764c36df32d", catalogProductId: "NKDC1963", name: "Nike Dri-FIT Micro Pique 2.0 Polo", description: "The best-selling Nike polo with updated design lines and Dri-FIT moisture management technology.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-4524406-front-white-product.png", category: "Polos", costPrice: 25.65, wholesalePrice: 0, retailPrice: 0, sku: "NKDC1963", source: "Fulfill Engine", active: true },
+  { id: "2ebe2108-6ec6-46a4-9e54-5cac7386d253", catalogProductId: "NKDC1991", name: "Nike Ladies Dri-FIT Micro Pique 2.0 Polo", description: "The best-selling Nike polo for women with soft, stretchable micro pique fabric.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-7493676-front-black-product.png", category: "Polos", costPrice: 25.65, wholesalePrice: 0, retailPrice: 0, sku: "NKDC1991", source: "Fulfill Engine", active: true },
+  { id: "ed197e7c-16f7-43b1-b4d4-9c74ad80ab0b", catalogProductId: "AT304", name: "Adidas Men's D4T Woven 7\" Shorts", description: "3.7 oz., 100% recycled polyester, AEROREADY moisture-management with side vents.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-8314200-front-black--white-product.png", category: "Shorts", costPrice: 31.15, wholesalePrice: 0, retailPrice: 0, sku: "AT304", source: "Fulfill Engine", active: true },
+  { id: "366b8c1a-d5df-444d-8588-af62fd7b3f1b", catalogProductId: "R20SWM", name: "Russell Athletic Legend Woven Shorts", description: "Polyester with 4-way stretch, water-repellent finish, covered elastic waistband with internal drawcord.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-3359975-front-black-product.png", category: "Shorts", costPrice: 22.10, wholesalePrice: 0, retailPrice: 0, sku: "R20SWM", source: "Fulfill Engine", active: true },
+  { id: "9d1ba28f-4b40-464e-9ed9-d4c8971cc93b", catalogProductId: "S162", name: "Champion Polyester Mesh 9\" Shorts", description: "Champion mesh shorts with pockets, athletic performance fit.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-8203175-front-athletic-grey-product.png", category: "Shorts", costPrice: 12.30, wholesalePrice: 0, retailPrice: 0, sku: "S162", source: "Fulfill Engine", active: true },
+  { id: "bf2c31a9-670e-4d58-a19f-7754720d5b59", catalogProductId: "RW26", name: "Champion Reverse Weave Shorts", description: "12 oz., 82/18 cotton/polyester fleece, double-needle stitched throughout, ribbed waistband with drawcord.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-6044878-front-black-product.png", category: "Shorts", costPrice: 24.35, wholesalePrice: 0, retailPrice: 0, sku: "RW26", source: "Fulfill Engine", active: true },
+  { id: "43121382-86a5-4629-82cd-83eb34373088", catalogProductId: "AT315", name: "Adidas Men's Entrada 26 Shorts", description: "4.4 oz., 100% recycled polyester, CLIMACOOL moisture-management, elastic waistband with drawcord.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-1340385-front-black--white-product.png", category: "Shorts", costPrice: 10.20, wholesalePrice: 0, retailPrice: 0, sku: "AT315", source: "Fulfill Engine", active: true },
+  { id: "72119eb5-d9f2-41e4-bf2d-5fa4a11f1a5c", catalogProductId: "L8869", name: "Cotton Canvas Tote", description: "11 oz., 100% cotton canvas with 24\" contrast handles, open front pocket, gusseted bottom.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-9284409-front-natural--black-product.png", category: "Bags", costPrice: 8.50, wholesalePrice: 0, retailPrice: 0, sku: "L8869", source: "Fulfill Engine", active: true },
+  { id: "8762a9d5-b5ba-4cee-ac88-4c7c638021df", catalogProductId: "BG204", name: "Port Authority Backpack", description: "Classic backpack with large main compartment, laptop sleeve and zippered front pocket.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-4247333-front-blue-product.png", category: "Bags", costPrice: 13.10, wholesalePrice: 0, retailPrice: 0, sku: "BG204", source: "Fulfill Engine", active: true },
+  { id: "474d12a6-59f2-4b93-b2c9-345c81790b44", catalogProductId: "BP20079-CO2", name: "40oz Tumbler", description: "Thor 40oz Eco-Friendly Straw Tumbler with durable double-wall construction, fits most cupholders.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-8769455-front-black-product.png", category: "Accessories", costPrice: 15.40, wholesalePrice: 0, retailPrice: 0, sku: "BP20079-CO2", source: "Fulfill Engine", active: true },
+  { id: "6bb7b0cb-b77e-4ce5-809f-294699194199", catalogProductId: "BP20067", name: "Bluetooth Speaker", description: "Stark 2.0 Bluetooth Speaker, compact with up to 4.5 hours battery, IPX5 waterproof rated.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-6272724-front-black-product.png", category: "Accessories", costPrice: 18.20, wholesalePrice: 0, retailPrice: 0, sku: "BP20067", source: "Fulfill Engine", active: true },
+  { id: "91662cd6-18dd-4793-b743-b711b7c2bcb8", catalogProductId: "BG938", name: "Port Authority Dual-Compartment Crossbody", description: "Smooth matte polyester with two zippered compartments and adjustable shoulder strap.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-2631985-front-deep-black-product.png", category: "Bags", costPrice: 8.65, wholesalePrice: 0, retailPrice: 0, sku: "BG938", source: "Fulfill Engine", active: true },
+  { id: "9a50908e-405f-4eb6-931f-fe8521fecd29", catalogProductId: "6006", name: "Flat Bill Trucker Cap", description: "Classic Trucker hat, structured, five-panel, high-profile, 3.5\" crown, snapback closure.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-5583643-front-black-product.png", category: "Hats", costPrice: 8.85, wholesalePrice: 0, retailPrice: 0, sku: "6006", source: "Fulfill Engine", active: true },
+  { id: "dad39c44-2032-49d7-b668-13d9dbd3f6a6", catalogProductId: "VC300A", name: "Dad Hat", description: "100% bio-washed chino twill, unstructured, six-panel, low-profile, buckle closure.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-3319311-front-black-product.png", category: "Hats", costPrice: 4.85, wholesalePrice: 0, retailPrice: 0, sku: "VC300A", source: "Fulfill Engine", active: true },
+  { id: "3787264c-35c4-43e0-bc65-23e543ed9006", catalogProductId: "BG1050", name: "Medium Two-Tone Duffel", description: "600 denier polyester canvas with D-shaped zippered entry, front pocket with hook and loop closure.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-4631492-front-black--black-product.png", category: "Bags", costPrice: 14.90, wholesalePrice: 0, retailPrice: 0, sku: "BG1050", source: "Fulfill Engine", active: true },
+  { id: "9871d311-2b4f-49f2-a94b-d303478cae98", catalogProductId: "K540", name: "Polo", description: "Silk Touch Performance Polo wicks moisture, resists snags with PosiCharge technology.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-6941853-front-teal-green-product.png", category: "Polos", costPrice: 9.55, wholesalePrice: 0, retailPrice: 0, sku: "K540", source: "Fulfill Engine", active: true },
+  { id: "f4b9d451-ca8f-4360-b52a-8cdd8c2925fa", catalogProductId: "L573", name: "Ladies Polo", description: "Rapid Dry moisture-wicking mesh polo combining cotton feel with breathable performance.", image: "https://app.fulfillengine.com/images/1ee36d04-dcd2-4568-8b37-794f077a1f5f/super-pure-water/1ee36d04-dcd2-4568-8b37-794f077a1f5f-9791401-front-true-navy-product.png", category: "Polos", costPrice: 14.30, wholesalePrice: 0, retailPrice: 0, sku: "L573", source: "Fulfill Engine", active: true },
+  // Printify Products
+  { id: "69abc874a028393ce202a853", catalogProductId: "BC3719", name: "Bella+Canvas 3719 Hoodie", description: "Lightweight, lived-in comfort pullover hoodie, soft against the skin with a quiet, playful message.", image: "https://images-api.printify.com/mockup/69abc874a028393ce202a853/72023/16190/bellacanvas-3719.jpg?camera_label=front", category: "Hoodies", costPrice: 28.64, wholesalePrice: 0, retailPrice: 0, sku: "BC3719", source: "Printify", active: true },
+  { id: "69abc732b360648baa01cd2d", catalogProductId: "G18500", name: "Gildan 18500 Hoodie", description: "Soft, midweight hoodie that feels like a warm embrace. Perfect for evening walks and slow mornings.", image: "https://images-api.printify.com/mockup/69abc732b360648baa01cd2d/32920/98424/gildan-18500.jpg?camera_label=front", category: "Hoodies", costPrice: 15.89, wholesalePrice: 0, retailPrice: 0, sku: "G18500", source: "Printify", active: true },
+  { id: "69ab32d5d959867b0506f74a", catalogProductId: "BC3001", name: "Bella Canvas 3001 Tee", description: "A soft, breathable tee with clean water-themed design - bold blue lettering and a small drop icon.", image: "https://images-api.printify.com/mockup/69ab32d5d959867b0506f74a/18102/102044/bella-canvas-3001.jpg?camera_label=front-2", category: "Tees", costPrice: 13.79, wholesalePrice: 0, retailPrice: 0, sku: "BC3001-P", source: "Printify", active: true },
+  { id: "69ab2f6fb360648baa01b3b3", catalogProductId: "NL6210", name: "Super Pure Water T-Shirt (Next Level 6210)", description: "Soft, lightweight tee with clean water-themed logo and subtle back text. CVC blend comfort.", image: "https://images-api.printify.com/mockup/69ab2f6fb360648baa01b3b3/100248/95837/super-pure-water-t-shirt-next-level-6210.jpg?camera_label=front", category: "Tees", costPrice: 13.59, wholesalePrice: 0, retailPrice: 0, sku: "NL6210-P", source: "Printify", active: true },
+  { id: "69ab2e79c22eeedecc02a1f0", catalogProductId: "CC1717", name: "Comfort Colors 1717 Tee", description: "Garment-dyed tee with that perfectly broken-in feel. Fully customizable with Super Pure Water design.", image: "https://images-api.printify.com/mockup/69ab2e79c22eeedecc02a1f0/73204/98445/comfort-colors-1717.jpg?camera_label=front", category: "Tees", costPrice: 15.56, wholesalePrice: 0, retailPrice: 0, sku: "CC1717-P", source: "Printify", active: true },
 ]
 
-const DEMO_ORDERS = [
-  {
-    id: 'ORD-001',
-    customer: 'John Smith',
-    email: 'john@example.com',
-    type: 'retail',
-    items: [{ productId: 'spw-001', name: 'Super Pure Water - 24 Pack (16.9oz)', qty: 3, price: 8.99 }],
-    total: 26.97,
-    status: 'processing',
-    date: '2026-04-08',
-  },
-  {
-    id: 'ORD-002',
-    customer: 'Kris (Owner)',
-    email: 'kris@superpurewater.com',
-    type: 'wholesale',
-    items: [
-      { productId: 'spw-001', name: 'Super Pure Water - 24 Pack (16.9oz)', qty: 50, price: 5.50 },
-      { productId: 'spw-002', name: 'Super Pure Water - 12 Pack (1 Liter)', qty: 30, price: 8.00 },
-    ],
-    total: 515.00,
-    status: 'shipped',
-    date: '2026-04-07',
-  },
-  {
-    id: 'ORD-003',
-    customer: 'Sarah Lee',
-    email: 'sarah@example.com',
-    type: 'retail',
-    items: [{ productId: 'spw-004', name: 'Super Pure Water Branded T-Shirt', qty: 2, price: 24.99 }],
-    total: 49.98,
-    status: 'delivered',
-    date: '2026-04-05',
-  },
-]
+// Load saved pricing from localStorage (persists your markup decisions)
+function loadProducts() {
+  const saved = localStorage.getItem('spw_pricing')
+  if (saved) {
+    const pricing = JSON.parse(saved)
+    return INITIAL_PRODUCTS.map(p => ({
+      ...p,
+      wholesalePrice: pricing[p.id]?.wholesalePrice ?? p.wholesalePrice,
+      retailPrice: pricing[p.id]?.retailPrice ?? p.retailPrice,
+    }))
+  }
+  return INITIAL_PRODUCTS
+}
+
+function savePricing(products) {
+  const pricing = {}
+  products.forEach(p => {
+    pricing[p.id] = { wholesalePrice: p.wholesalePrice, retailPrice: p.retailPrice }
+  })
+  localStorage.setItem('spw_pricing', JSON.stringify(pricing))
+}
+
+const DEMO_ORDERS = []
 
 // ============================================================
 // HELPERS
@@ -309,7 +249,7 @@ function Input({ label, ...props }) {
 // CUSTOMER STOREFRONT
 // ============================================================
 function CustomerStore() {
-  const [products] = useState(DEMO_PRODUCTS.filter(p => p.active))
+  const [products] = useState(loadProducts().filter(p => p.active))
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -318,6 +258,7 @@ function CustomerStore() {
 
   const categories = ['All', ...new Set(products.map(p => p.category))]
   const filtered = products.filter(p => {
+    if (!p.active || p.retailPrice <= 0) return false
     const matchCat = selectedCategory === 'All' || p.category === selectedCategory
     const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchCat && matchSearch
@@ -766,7 +707,7 @@ function OwnerPortal() {
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
   const [page, setPage] = useState('products')
-  const [products] = useState(DEMO_PRODUCTS.filter(p => p.active))
+  const [products] = useState(loadProducts().filter(p => p.active))
   const [orders] = useState(DEMO_ORDERS.filter(o => o.type === 'wholesale'))
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
@@ -866,7 +807,7 @@ function OwnerPortal() {
               <p style={{ fontSize: '14px', opacity: 0.85 }}>Order at wholesale prices. Minimum quantities may apply.</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {products.map(p => (
+              {products.filter(p => p.active && p.wholesalePrice > 0).map(p => (
                 <div
                   key={p.id}
                   onClick={() => setSelectedProduct(p)}
@@ -947,7 +888,7 @@ function AdminPortal() {
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
   const [page, setPage] = useState('dashboard')
-  const [products, setProducts] = useState(DEMO_PRODUCTS)
+  const [products, setProducts] = useState(loadProducts())
   const [orders] = useState(DEMO_ORDERS)
   const [showCost, setShowCost] = useState(true)
   const [editingProduct, setEditingProduct] = useState(null)
@@ -1223,9 +1164,13 @@ function AdminPortal() {
                           isEditing={isEditing}
                           onEdit={() => setEditingProduct(p.id)}
                           onSave={(updates) => {
-                            setProducts(prev => prev.map(prod =>
-                              prod.id === p.id ? { ...prod, ...updates } : prod
-                            ))
+                            setProducts(prev => {
+                              const updated = prev.map(prod =>
+                                prod.id === p.id ? { ...prod, ...updates } : prod
+                              )
+                              savePricing(updated)
+                              return updated
+                            })
                             setEditingProduct(null)
                           }}
                           onCancel={() => setEditingProduct(null)}
