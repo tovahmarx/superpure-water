@@ -227,6 +227,21 @@ function CartProvider({ children }) {
     localStorage.setItem('spw_cart', JSON.stringify(items))
   }, [items])
 
+  // Backfill source for old cart items loaded from localStorage
+  useEffect(() => {
+    setItems(prev => {
+      let changed = false
+      const updated = prev.map(item => {
+        if (!item.source) {
+          const prod = INITIAL_PRODUCTS.find(p => p.id === item.productId)
+          if (prod) { changed = true; return { ...item, source: prod.source } }
+        }
+        return item
+      })
+      return changed ? updated : prev
+    })
+  }, [])
+
   const addItem = (product, qty = 1, priceType = 'retail') => {
     const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
     const color = product.selectedColor || ''

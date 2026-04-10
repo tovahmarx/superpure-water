@@ -106,7 +106,7 @@ export default async function handler(req, res) {
       line_items: lineItems,
       discounts,
       customer_email: customerEmail || undefined,
-      automatic_tax: { enabled: true },
+      shipping_address_collection: { allowed_countries: ['US'] },
       success_url: `${origin}/order-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${priceType === 'wholesale' ? 'wholesale' : ''}`,
       metadata: {
@@ -119,7 +119,10 @@ export default async function handler(req, res) {
     return res.status(200).json({ url: session.url, sessionId: session.id })
   } catch (err) {
     console.error('Checkout error:', err)
-    return res.status(500).json({ error: err.message })
+    const msg = err.type === 'StripeInvalidRequestError'
+      ? 'Payment setup issue. Please contact support.'
+      : err.message
+    return res.status(500).json({ error: msg })
   }
 }
 
