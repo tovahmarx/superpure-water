@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu } from 'lucide-react'
+import COLOR_IMAGES from './colorImages.js'
 import './App.css'
 
 // ============================================================
@@ -484,10 +485,12 @@ function ProductDetail({ product, onBack, priceType }) {
   const cart = useContext(CartContext)
   const [qty, setQty] = useState(1)
   const variants = PRODUCT_VARIANTS[product.id] || { sizes: [], colors: [] }
+  const colorImgs = COLOR_IMAGES[product.id] || {}
   const [selectedColor, setSelectedColor] = useState(variants.colors[0] || '')
   const [selectedSize, setSelectedSize] = useState(variants.sizes[0] || '')
   const [added, setAdded] = useState(false)
   const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
+  const currentImage = colorImgs[selectedColor] || product.image
 
   const canAdd = (!variants.colors.length || selectedColor) && (!variants.sizes.length || selectedSize)
 
@@ -514,7 +517,7 @@ function ProductDetail({ product, onBack, priceType }) {
         </button>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)' }}>
           <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
-            <img src={product.image} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+            <img src={currentImage} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
           </div>
           <div>
             <Badge>{product.category}</Badge>
@@ -597,19 +600,21 @@ function ProductDetail({ product, onBack, priceType }) {
               </Btn>
             </div>
 
-            {/* Product Info */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--gray-600)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span>SKU</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.sku}</span>
+            {/* Product Info — hidden from customers */}
+            {priceType === 'wholesale' && (
+              <div style={{ marginTop: '24px', padding: '16px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--gray-600)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span>SKU</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.sku}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span>Source</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.source}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Availability</span>
+                  <span style={{ fontWeight: 600, color: 'var(--green)' }}>In Stock</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span>Source</span><span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{product.source}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Availability</span>
-                <span style={{ fontWeight: 600, color: 'var(--green)' }}>In Stock</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -885,6 +890,7 @@ function OwnerPortal() {
         <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--gray-200)' }}>
           {[
             { key: 'products', label: 'Products', icon: <Package size={16} /> },
+            { key: 'requests', label: 'Employee Requests', icon: <Users size={16} /> },
             { key: 'orders', label: 'My Orders', icon: <Truck size={16} /> },
           ].map(tab => (
             <button
@@ -950,6 +956,10 @@ function OwnerPortal() {
               ))}
             </div>
           </>
+        )}
+
+        {page === 'requests' && (
+          <EmployeeRequestsView />
         )}
 
         {page === 'orders' && (
@@ -1534,6 +1544,322 @@ function PricingRow({ product, isEditing, selected, onToggle, onEdit, onSave, on
 }
 
 // ============================================================
+// EMPLOYEE REQUESTS VIEW (shown in Kris's owner portal)
+// ============================================================
+function EmployeeRequestsView() {
+  const [requests, setRequests] = useState(() => JSON.parse(localStorage.getItem('spw_requests') || '[]'))
+
+  const updateStatus = (idx, status) => {
+    setRequests(prev => {
+      const updated = prev.map((r, i) => i === idx ? { ...r, status } : r)
+      localStorage.setItem('spw_requests', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--gray-900)', marginBottom: '16px' }}>Employee Requests</h2>
+      <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginBottom: '24px' }}>
+        Employees submit requests at <strong>/request</strong>. Review and approve below.
+      </p>
+      {requests.length === 0 ? (
+        <p style={{ color: 'var(--gray-400)', textAlign: 'center', padding: '40px' }}>No requests yet</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {requests.map((req, idx) => (
+            <div key={idx} style={{
+              background: 'var(--white)', borderRadius: 'var(--radius-md)',
+              padding: '20px', border: '1px solid var(--gray-200)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gray-900)' }}>{req.employee}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--gray-400)', marginLeft: '12px' }}>
+                    {new Date(req.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <Badge variant={req.status === 'approved' ? 'green' : req.status === 'denied' ? 'red' : 'default'}>
+                  {req.status}
+                </Badge>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {req.items.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: 'var(--gray-600)' }}>
+                    <img src={item.image} alt="" style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', objectFit: 'contain', background: 'var(--gray-50)' }} />
+                    <div>
+                      <span style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{item.name}</span>
+                      <span style={{ marginLeft: '8px' }}>{item.color}{item.size ? ` / ${item.size}` : ''}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {req.status === 'pending' && (
+                <div style={{ display: 'flex', gap: '8px', marginTop: '16px', borderTop: '1px solid var(--gray-100)', paddingTop: '16px' }}>
+                  <Btn size="sm" onClick={() => updateStatus(idx, 'approved')} style={{ background: 'var(--green)' }}>
+                    <Check size={14} /> Approve
+                  </Btn>
+                  <button
+                    onClick={() => updateStatus(idx, 'denied')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                      padding: '6px 14px', fontSize: '13px', fontWeight: 600,
+                      background: 'var(--white)', color: 'var(--red)',
+                      border: '1px solid var(--red)', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                    }}
+                  >
+                    <X size={14} /> Deny
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
+// REQUEST PRODUCT DETAIL (for employee request page)
+// ============================================================
+function RequestProductDetail({ product, onBack, onAdd }) {
+  const variants = PRODUCT_VARIANTS[product.id] || { sizes: [], colors: [] }
+  const colorImgs = COLOR_IMAGES[product.id] || {}
+  const [selColor, setSelColor] = useState(variants.colors[0] || '')
+  const [selSize, setSelSize] = useState(variants.sizes[0] || '')
+  const currentImg = colorImgs[selColor] || product.image
+
+  const selectStyle = (active) => ({
+    padding: '8px 16px', fontSize: '13px', fontWeight: 600,
+    borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'all 0.15s',
+    border: active ? '2px solid var(--blue)' : '1px solid var(--gray-200)',
+    background: active ? 'var(--blue-light)' : 'var(--white)',
+    color: active ? 'var(--blue)' : 'var(--gray-700)',
+  })
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
+          <ArrowLeft size={16} /> Back to products
+        </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)' }}>
+          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
+            <img src={currentImg} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+          </div>
+          <div>
+            <Badge>{product.category}</Badge>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '12px', lineHeight: 1.2, color: 'var(--gray-900)' }}>
+              {product.name}
+            </h1>
+            <p style={{ fontSize: '15px', color: 'var(--gray-600)', marginTop: '12px', lineHeight: 1.6 }}>
+              {product.description}
+            </p>
+
+            {variants.colors.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>
+                  Color — {selColor}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {variants.colors.map(c => (
+                    <button key={c} onClick={() => setSelColor(c)} style={selectStyle(selColor === c)}>{c}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {variants.sizes.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>
+                  Size — {selSize}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {variants.sizes.map(s => (
+                    <button key={s} onClick={() => setSelSize(s)} style={selectStyle(selSize === s)}>{s}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Btn
+              size="lg"
+              onClick={() => onAdd({
+                productId: product.id, name: product.name,
+                image: currentImg, color: selColor, size: selSize,
+              })}
+              style={{ width: '100%', marginTop: '24px' }}
+            >
+              <Plus size={18} /> Add to Request
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// EMPLOYEE REQUEST PAGE
+// ============================================================
+function EmployeeRequest() {
+  const products = loadProducts()
+  const [name, setName] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [requests, setRequests] = useState([])
+  const [submitted, setSubmitted] = useState(false)
+
+  if (selectedProduct) {
+    return <RequestProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} onAdd={(item) => { setRequests(prev => [...prev, item]); setSelectedProduct(null) }} />
+  }
+
+  if (submitted) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gray-50)' }}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%', background: 'var(--green-light)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
+          }}>
+            <Check size={32} style={{ color: 'var(--green)' }} />
+          </div>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Request Submitted!</h2>
+          <p style={{ color: 'var(--gray-500)', marginTop: '8px' }}>Your request has been sent to the team. You will be notified when it is approved.</p>
+          <Btn onClick={() => { setSubmitted(false); setRequests([]); setName('') }} style={{ marginTop: '24px' }}>Submit Another Request</Btn>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
+      {/* Header */}
+      <header style={{
+        background: 'var(--white)', borderBottom: '1px solid var(--gray-100)',
+        padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Droplets size={24} style={{ color: 'var(--blue)' }} />
+          <div>
+            <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--gray-900)' }}>SUPER PURE WATER</span>
+            <span style={{ fontSize: '11px', display: 'block', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Employee Request</span>
+          </div>
+        </div>
+        {requests.length > 0 && (
+          <Badge variant="blue">{requests.length} item{requests.length > 1 ? 's' : ''} selected</Badge>
+        )}
+      </header>
+
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+        {/* Name Input */}
+        <div style={{
+          background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '24px',
+          border: '1px solid var(--gray-200)', marginBottom: '24px',
+        }}>
+          <label style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-900)', marginBottom: '8px', display: 'block' }}>
+            Your Name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Enter your full name"
+            style={{
+              width: '100%', padding: '10px 14px', fontSize: '15px',
+              border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-sm)',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {/* Instructions */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0066FF 0%, #0044AA 100%)',
+          borderRadius: 'var(--radius-lg)', padding: '24px', color: 'var(--white)', marginBottom: '24px',
+        }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Select Your Items</h2>
+          <p style={{ fontSize: '14px', opacity: 0.85 }}>Browse products below, choose your size and color, then submit your request for approval.</p>
+        </div>
+
+        {/* Product Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+          {products.filter(p => p.active).map(product => (
+            <div
+              key={product.id}
+              onClick={() => setSelectedProduct(product)}
+              style={{
+                background: 'var(--white)', borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+                border: '1px solid var(--gray-200)', cursor: 'pointer', transition: 'box-shadow 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+            >
+              <div style={{ height: '180px', overflow: 'hidden', background: 'var(--gray-100)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </div>
+              <div style={{ padding: '16px' }}>
+                <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-900)' }}>{product.name}</p>
+                <p style={{ fontSize: '12px', color: 'var(--gray-400)', marginTop: '4px' }}>{product.category}</p>
+                <Btn size="sm" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product) }} style={{ width: '100%', marginTop: '12px' }}>
+                  Select Options
+                </Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Request Summary + Submit */}
+        {requests.length > 0 && (
+          <div style={{
+            position: 'fixed', bottom: '0', left: '0', right: '0',
+            background: 'var(--white)', borderTop: '2px solid var(--gray-200)',
+            padding: '16px 24px', zIndex: 100,
+            boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+          }}>
+            <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-900)' }}>
+                  {requests.length} item{requests.length > 1 ? 's' : ''} selected
+                </span>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                  {requests.map((r, i) => (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      background: 'var(--gray-50)', padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+                      fontSize: '12px', color: 'var(--gray-600)',
+                    }}>
+                      <img src={r.image} alt="" style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'contain' }} />
+                      <span>{r.name} — {r.color}{r.size ? ` / ${r.size}` : ''}</span>
+                      <button onClick={() => setRequests(prev => prev.filter((_, idx) => idx !== i))} style={{ color: 'var(--gray-400)', marginLeft: '4px' }}>
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Btn
+                onClick={() => {
+                  if (!name.trim()) { alert('Please enter your name'); return }
+                  // Save to localStorage for now (will move to Supabase)
+                  const saved = JSON.parse(localStorage.getItem('spw_requests') || '[]')
+                  saved.push({ employee: name, items: requests, date: new Date().toISOString(), status: 'pending' })
+                  localStorage.setItem('spw_requests', JSON.stringify(saved))
+                  setSubmitted(true)
+                }}
+                style={{ padding: '12px 32px' }}
+              >
+                Submit Request
+              </Btn>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
 // APP ROUTER
 // ============================================================
 function AppRoutes() {
@@ -1543,6 +1869,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/wholesale" element={<OwnerPortal />} />
       <Route path="/admin" element={<AdminPortal />} />
+      <Route path="/request" element={<EmployeeRequest />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
