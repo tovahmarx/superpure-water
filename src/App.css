@@ -3,3 +3,14 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Hide scrollbar on horizontal scroll containers but keep scrolling */
+@media (max-width: 767px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Make touch targets bigger on mobile */
+  button {
+    min-height: 36px;
+  }
+}

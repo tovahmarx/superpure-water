@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useCallback } from 'react'
+import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom'
 import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu, Loader } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
@@ -19,6 +19,18 @@ const supabase = createClient(
 const AuthContext = createContext(null)
 const CartContext = createContext(null)
 const CreditContext = createContext(null)
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < breakpoint)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
+    const handler = (e) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    setIsMobile(mq.matches)
+    return () => mq.removeEventListener('change', handler)
+  }, [breakpoint])
+  return isMobile
+}
 
 // ============================================================
 // REAL PRODUCT DATA — From Fulfill Engine Super Pure Water Store
@@ -415,6 +427,7 @@ function CustomerStore() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
   const cart = useContext(CartContext)
+  const mobile = useIsMobile()
 
   const categories = ['All', ...new Set(products.map(p => p.category))]
   const filtered = products.filter(p => {
@@ -440,16 +453,16 @@ function CustomerStore() {
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{
-          maxWidth: '1200px', margin: '0 auto', padding: '16px 24px',
+          maxWidth: '1200px', margin: '0 auto', padding: mobile ? '12px 16px' : '16px 24px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/logo.svg" alt="Super Pure Water" style={{ height: '48px', width: 'auto' }} />
+            <img src="/logo.svg" alt="Super Pure Water" style={{ height: mobile ? '36px' : '48px', width: 'auto' }} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Link to="/login" style={{ fontSize: '13px', color: 'var(--gray-500)', fontWeight: 500 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: mobile ? '10px' : '16px' }}>
+            {!mobile && <Link to="/login" style={{ fontSize: '13px', color: 'var(--gray-500)', fontWeight: 500 }}>
               Wholesale Login
-            </Link>
+            </Link>}
             <button
               onClick={() => setShowCart(true)}
               style={{
@@ -479,19 +492,19 @@ function CustomerStore() {
       {/* Hero */}
       <section style={{
         background: 'linear-gradient(135deg, #0066FF 0%, #0044AA 100%)',
-        padding: '60px 24px', textAlign: 'center', color: 'var(--white)',
+        padding: mobile ? '32px 20px' : '60px 24px', textAlign: 'center', color: 'var(--white)',
       }}>
-        <h2 style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '12px' }}>
+        <h2 style={{ fontSize: mobile ? '26px' : '40px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '12px' }}>
           Pure Water. Pure Life.
         </h2>
-        <p style={{ fontSize: '18px', opacity: 0.85, maxWidth: '500px', margin: '0 auto' }}>
+        <p style={{ fontSize: mobile ? '15px' : '18px', opacity: 0.85, maxWidth: '500px', margin: '0 auto' }}>
           Premium purified water and branded merchandise. Delivered fresh to your door.
         </p>
       </section>
 
       {/* Filters */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 24px 0' }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: mobile ? '16px 16px 0' : '24px 24px 0' }}>
+        <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', gap: '12px', alignItems: mobile ? 'stretch' : 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
             <input
@@ -502,10 +515,11 @@ function CustomerStore() {
                 width: '100%', padding: '10px 14px 10px 38px',
                 border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)',
                 fontSize: '14px', outline: 'none', background: 'var(--white)',
+                boxSizing: 'border-box',
               }}
             />
           </div>
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: mobile ? '4px' : 0 }}>
             {categories.map(cat => (
               <button
                 key={cat}
@@ -515,6 +529,7 @@ function CustomerStore() {
                   background: selectedCategory === cat ? 'var(--black)' : 'var(--white)',
                   color: selectedCategory === cat ? 'var(--white)' : 'var(--gray-600)',
                   border: selectedCategory === cat ? 'none' : '1px solid var(--gray-200)',
+                  whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
                 {cat}
@@ -526,8 +541,8 @@ function CustomerStore() {
 
       {/* Products Grid */}
       <div style={{
-        maxWidth: '1200px', margin: '0 auto', padding: '24px',
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px',
+        maxWidth: '1200px', margin: '0 auto', padding: mobile ? '16px' : '24px',
+        display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: mobile ? '12px' : '20px',
       }}>
         {filtered.map(product => (
           <div
@@ -542,7 +557,7 @@ function CustomerStore() {
             onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
           >
             <div style={{
-              height: '220px', background: 'var(--gray-100)', overflow: 'hidden', padding: '16px',
+              height: mobile ? '150px' : '220px', background: 'var(--gray-100)', overflow: 'hidden', padding: mobile ? '10px' : '16px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <img
@@ -551,16 +566,16 @@ function CustomerStore() {
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </div>
-            <div style={{ padding: '16px' }}>
-              <Badge>{product.category}</Badge>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, marginTop: '8px', lineHeight: 1.3, color: 'var(--gray-900)' }}>
+            <div style={{ padding: mobile ? '10px' : '16px' }}>
+              {!mobile && <Badge>{product.category}</Badge>}
+              <h3 style={{ fontSize: mobile ? '13px' : '15px', fontWeight: 700, marginTop: mobile ? '0' : '8px', lineHeight: 1.3, color: 'var(--gray-900)' }}>
                 {product.name}
               </h3>
-              <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '4px', lineHeight: 1.4 }}>
+              {!mobile && <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '4px', lineHeight: 1.4 }}>
                 {product.description.slice(0, 80)}...
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
-                <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--gray-900)' }}>
+              </p>}
+              <div style={{ display: 'flex', alignItems: mobile ? 'flex-start' : 'center', justifyContent: 'space-between', marginTop: mobile ? '8px' : '12px', flexDirection: mobile ? 'column' : 'row', gap: mobile ? '8px' : '0' }}>
+                <span style={{ fontSize: mobile ? '17px' : '20px', fontWeight: 800, color: 'var(--gray-900)' }}>
                   {fmt(product.retailPrice)}
                 </span>
                 <Btn
@@ -569,6 +584,7 @@ function CustomerStore() {
                     e.stopPropagation()
                     setSelectedProduct(product)
                   }}
+                  style={mobile ? { width: '100%', fontSize: '12px', padding: '6px 10px' } : {}}
                 >
                   Select Options
                 </Btn>
@@ -603,6 +619,7 @@ function ProductDetail({ product, onBack, priceType }) {
   const [selectedSize, setSelectedSize] = useState(variants.sizes[0] || '')
   const [selectedImageIdx, setSelectedImageIdx] = useState(0)
   const [added, setAdded] = useState(false)
+  const mobile = useIsMobile()
   const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice
   const images = colorImgs[selectedColor] || [product.image]
   const currentImage = images[selectedImageIdx] || images[0] || product.image
@@ -626,14 +643,14 @@ function ProductDetail({ product, onBack, priceType }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
-        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: mobile ? '16px' : '40px 24px' }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: mobile ? '16px' : '24px' }}>
           <ArrowLeft size={16} /> Back to products
         </button>
-        <div style={{ display: 'flex', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)' }}>
-          <div style={{ flex: '0 0 45%' }}>
+        <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', gap: mobile ? '20px' : '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: mobile ? '16px' : '32px', border: '1px solid var(--gray-200)' }}>
+          <div style={{ flex: mobile ? 'none' : '0 0 45%' }}>
             <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
-              <img src={currentImage} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+              <img src={currentImage} alt={product.name} style={{ width: '100%', height: mobile ? '280px' : '400px', objectFit: 'contain', padding: mobile ? '12px' : '20px' }} />
             </div>
             {images.length > 1 && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -642,7 +659,7 @@ function ProductDetail({ product, onBack, priceType }) {
                     key={idx}
                     onClick={() => setSelectedImageIdx(idx)}
                     style={{
-                      width: '72px', height: '72px', borderRadius: 'var(--radius-sm)',
+                      width: mobile ? '56px' : '72px', height: mobile ? '56px' : '72px', borderRadius: 'var(--radius-sm)',
                       border: selectedImageIdx === idx ? '2px solid var(--blue)' : '1px solid var(--gray-200)',
                       background: 'var(--gray-50)', padding: '4px', cursor: 'pointer', overflow: 'hidden',
                     }}
@@ -655,14 +672,14 @@ function ProductDetail({ product, onBack, priceType }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Badge>{product.category}</Badge>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '12px', lineHeight: 1.2, color: 'var(--gray-900)' }}>
+            <h1 style={{ fontSize: mobile ? '22px' : '28px', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '12px', lineHeight: 1.2, color: 'var(--gray-900)' }}>
               {product.name}
             </h1>
-            <p style={{ fontSize: '15px', color: 'var(--gray-600)', marginTop: '12px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: mobile ? '14px' : '15px', color: 'var(--gray-600)', marginTop: '12px', lineHeight: 1.6 }}>
               {product.description}
             </p>
             <div style={{ marginTop: '20px' }}>
-              <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--gray-900)' }}>{fmt(price)}</span>
+              <span style={{ fontSize: mobile ? '26px' : '32px', fontWeight: 800, color: 'var(--gray-900)' }}>{fmt(price)}</span>
               {priceType === 'wholesale' && product.retailPrice > 0 && (
                 <span style={{ fontSize: '14px', color: 'var(--gray-400)', marginLeft: '8px', textDecoration: 'line-through' }}>
                   {fmt(product.retailPrice)}
@@ -755,6 +772,7 @@ function CartView({ onBack, priceType }) {
   const [useStoreCredit, setUseStoreCredit] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
   const [shipping, setShipping] = useState({ total: 0, breakdown: null, loading: true })
+  const mobile = useIsMobile()
 
   const isWholesale = priceType === 'wholesale'
   const orderTotal = Math.round((cart.total + shipping.total) * 100) / 100
@@ -854,36 +872,47 @@ function CartView({ onBack, priceType }) {
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {cart.items.map(item => (
                 <div key={item.key} style={{
-                  display: 'flex', alignItems: 'center', gap: '16px', padding: '16px',
+                  display: 'flex', flexDirection: mobile ? 'column' : 'row', alignItems: mobile ? 'stretch' : 'center', gap: mobile ? '12px' : '16px', padding: mobile ? '12px' : '16px',
                   background: 'var(--white)', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)',
                 }}>
-                  <img src={item.image} alt="" style={{ width: '64px', height: '64px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-900)' }}>{item.name}</p>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-                      {item.color && <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--gray-500)', background: 'var(--gray-50)', padding: '2px 8px', borderRadius: '4px' }}>{item.color}</span>}
-                      {item.size && <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--gray-500)', background: 'var(--gray-50)', padding: '2px 8px', borderRadius: '4px' }}>{item.size}</span>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={item.image} alt="" style={{ width: mobile ? '56px' : '64px', height: mobile ? '56px' : '64px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-900)' }}>{item.name}</p>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
+                        {item.color && <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--gray-500)', background: 'var(--gray-50)', padding: '2px 8px', borderRadius: '4px' }}>{item.color}</span>}
+                        {item.size && <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--gray-500)', background: 'var(--gray-50)', padding: '2px 8px', borderRadius: '4px' }}>{item.size}</span>}
+                      </div>
+                      <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '2px' }}>{fmt(item.price)} each</p>
                     </div>
-                    <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '2px' }}>{fmt(item.price)} each</p>
+                    {mobile && (
+                      <button onClick={() => cart.removeItem(item.key)} style={{ color: 'var(--gray-400)', flexShrink: 0 }}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', border: '1px solid var(--gray-200)',
-                    borderRadius: 'var(--radius-sm)', overflow: 'hidden',
-                  }}>
-                    <button onClick={() => cart.updateQty(item.key, item.qty - 1)} style={{ padding: '6px 10px' }}>
-                      <Minus size={14} />
-                    </button>
-                    <span style={{ padding: '6px 12px', fontWeight: 600, fontSize: '13px' }}>{item.qty}</span>
-                    <button onClick={() => cart.updateQty(item.key, item.qty + 1)} style={{ padding: '6px 10px' }}>
-                      <Plus size={14} />
-                    </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: mobile ? 'space-between' : 'flex-end', gap: '12px' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', border: '1px solid var(--gray-200)',
+                      borderRadius: 'var(--radius-sm)', overflow: 'hidden',
+                    }}>
+                      <button onClick={() => cart.updateQty(item.key, item.qty - 1)} style={{ padding: '6px 10px' }}>
+                        <Minus size={14} />
+                      </button>
+                      <span style={{ padding: '6px 12px', fontWeight: 600, fontSize: '13px' }}>{item.qty}</span>
+                      <button onClick={() => cart.updateQty(item.key, item.qty + 1)} style={{ padding: '6px 10px' }}>
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '15px', fontWeight: 700, minWidth: '70px', textAlign: 'right' }}>
+                      {fmt(item.price * item.qty)}
+                    </span>
+                    {!mobile && (
+                      <button onClick={() => cart.removeItem(item.key)} style={{ color: 'var(--gray-400)' }}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
-                  <span style={{ fontSize: '15px', fontWeight: 700, minWidth: '70px', textAlign: 'right' }}>
-                    {fmt(item.price * item.qty)}
-                  </span>
-                  <button onClick={() => cart.removeItem(item.key)} style={{ color: 'var(--gray-400)' }}>
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               ))}
             </div>
@@ -1073,6 +1102,7 @@ function OwnerPortal() {
   const [showCart, setShowCart] = useState(false)
   const cart = useContext(CartContext)
   const credit = useContext(CreditContext)
+  const mobile = useIsMobile()
 
   if (!user || user.role !== 'owner') return <Navigate to="/login" />
 
@@ -1141,23 +1171,23 @@ function OwnerPortal() {
       </header>
 
       {/* Tabs */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 24px 0' }}>
-        <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--gray-200)' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: mobile ? '12px 16px 0' : '20px 24px 0' }}>
+        <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--gray-200)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
-            { key: 'products', label: 'Products', icon: <Package size={16} /> },
-            { key: 'credit', label: 'Store Credit', icon: <DollarSign size={16} /> },
-            { key: 'requests', label: 'Employee Requests', icon: <Users size={16} /> },
-            { key: 'orders', label: 'My Orders', icon: <Truck size={16} /> },
+            { key: 'products', label: mobile ? 'Products' : 'Products', icon: <Package size={16} /> },
+            { key: 'credit', label: mobile ? 'Credit' : 'Store Credit', icon: <DollarSign size={16} /> },
+            { key: 'requests', label: mobile ? 'Requests' : 'Employee Requests', icon: <Users size={16} /> },
+            { key: 'orders', label: mobile ? 'Orders' : 'My Orders', icon: <Truck size={16} /> },
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setPage(tab.key)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '10px 18px', fontSize: '13px', fontWeight: 600,
+                padding: mobile ? '10px 12px' : '10px 18px', fontSize: '13px', fontWeight: 600,
                 color: page === tab.key ? 'var(--gray-900)' : 'var(--gray-500)',
                 borderBottom: page === tab.key ? '2px solid var(--black)' : '2px solid transparent',
-                marginBottom: '-1px',
+                marginBottom: '-1px', whiteSpace: 'nowrap', flexShrink: 0,
               }}
             >
               {tab.icon} {tab.label}
@@ -1167,17 +1197,17 @@ function OwnerPortal() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: mobile ? '16px' : '24px' }}>
         {page === 'products' && (
           <>
             <div style={{
               background: 'linear-gradient(135deg, #0066FF 0%, #0044AA 100%)',
-              borderRadius: 'var(--radius-lg)', padding: '32px', color: 'var(--white)', marginBottom: '24px',
+              borderRadius: 'var(--radius-lg)', padding: mobile ? '20px' : '32px', color: 'var(--white)', marginBottom: mobile ? '16px' : '24px',
             }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '4px' }}>Wholesale Pricing</h2>
+              <h2 style={{ fontSize: mobile ? '20px' : '24px', fontWeight: 800, marginBottom: '4px' }}>Wholesale Pricing</h2>
               <p style={{ fontSize: '14px', opacity: 0.85 }}>Order at wholesale prices. Minimum quantities may apply.</p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: mobile ? '10px' : '16px' }}>
               {products.filter(p => p.active && p.wholesalePrice > 0).map(p => (
                 <div
                   key={p.id}
@@ -1189,21 +1219,20 @@ function OwnerPortal() {
                   onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
                 >
-                  <div style={{ height: '180px', overflow: 'hidden', background: 'var(--gray-100)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ height: mobile ? '140px' : '180px', overflow: 'hidden', background: 'var(--gray-100)', padding: mobile ? '10px' : '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </div>
-                  <div style={{ padding: '16px' }}>
-                    <Badge>{p.source}</Badge>
-                    <h3 style={{ fontSize: '14px', fontWeight: 700, marginTop: '8px', color: 'var(--gray-900)' }}>{p.name}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
-                      <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--blue)' }}>{fmt(p.wholesalePrice)}</span>
-                      <span style={{ fontSize: '13px', color: 'var(--gray-400)', textDecoration: 'line-through' }}>{fmt(p.retailPrice)}</span>
-                      <Badge variant="green">Save {pct(p.wholesalePrice, p.retailPrice)}</Badge>
+                  <div style={{ padding: mobile ? '10px' : '16px' }}>
+                    {!mobile && <Badge>{p.source}</Badge>}
+                    <h3 style={{ fontSize: mobile ? '13px' : '14px', fontWeight: 700, marginTop: mobile ? '0' : '8px', color: 'var(--gray-900)' }}>{p.name}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: mobile ? '4px' : '8px', marginTop: mobile ? '6px' : '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: mobile ? '16px' : '20px', fontWeight: 800, color: 'var(--blue)' }}>{fmt(p.wholesalePrice)}</span>
+                      <span style={{ fontSize: mobile ? '11px' : '13px', color: 'var(--gray-400)', textDecoration: 'line-through' }}>{fmt(p.retailPrice)}</span>
                     </div>
                     <Btn
                       size="sm"
                       onClick={(e) => { e.stopPropagation(); setSelectedProduct(p) }}
-                      style={{ width: '100%', marginTop: '12px' }}
+                      style={{ width: '100%', marginTop: mobile ? '8px' : '12px', ...(mobile ? { fontSize: '12px', padding: '6px 10px' } : {}) }}
                     >
                       Select Options
                     </Btn>
@@ -1336,6 +1365,8 @@ function AdminPortal() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [selectedProducts, setSelectedProducts] = useState([])
   const [bulkMargin, setBulkMargin] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const mobile = useIsMobile()
 
   if (!user || user.role !== 'admin') return <Navigate to="/login" />
 
@@ -1356,54 +1387,96 @@ function AdminPortal() {
   ]
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: '240px', background: 'var(--gray-900)', color: 'var(--white)',
-        padding: '20px 0', display: 'flex', flexDirection: 'column', flexShrink: 0,
-      }}>
-        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo.svg" alt="Super Pure Water" style={{ height: '36px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+    <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', minHeight: '100vh' }}>
+      {/* Mobile Header */}
+      {mobile && (
+        <header style={{
+          background: 'var(--gray-900)', color: 'var(--white)', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          position: 'sticky', top: 0, zIndex: 200,
+        }}>
+          <img src="/logo.svg" alt="Super Pure Water" style={{ height: '32px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button onClick={() => { logout(); navigate('/') }} style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <LogOut size={16} />
+            </button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ color: 'var(--white)' }}>
+              <Menu size={20} />
+            </button>
           </div>
-        </div>
-        <nav style={{ padding: '12px 8px', flex: 1 }}>
+        </header>
+      )}
+      {mobile && mobileMenuOpen && (
+        <nav style={{
+          background: 'var(--gray-900)', padding: '8px 16px 16px',
+          display: 'flex', gap: '6px', flexWrap: 'wrap',
+        }}>
           {sidebarItems.map(item => (
             <button
               key={item.key}
-              onClick={() => setPage(item.key)}
+              onClick={() => { setPage(item.key); setMobileMenuOpen(false) }}
               style={{
-                display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 500,
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '8px 14px', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 500,
                 color: page === item.key ? 'var(--white)' : 'rgba(255,255,255,0.5)',
-                background: page === item.key ? 'rgba(255,255,255,0.08)' : 'transparent',
-                marginBottom: '2px', textAlign: 'left',
+                background: page === item.key ? 'rgba(255,255,255,0.12)' : 'transparent',
               }}
             >
               {item.icon} {item.label}
             </button>
           ))}
         </nav>
-        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: '12px', opacity: 0.5, marginBottom: '4px' }}>Signed in as</div>
-          <div style={{ fontSize: '13px', fontWeight: 600 }}>{user.name}</div>
-          <button
-            onClick={() => { logout(); navigate('/') }}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '10px' }}
-          >
-            <LogOut size={14} /> Sign out
-          </button>
-        </div>
-      </aside>
+      )}
+
+      {/* Desktop Sidebar */}
+      {!mobile && (
+        <aside style={{
+          width: '240px', background: 'var(--gray-900)', color: 'var(--white)',
+          padding: '20px 0', display: 'flex', flexDirection: 'column', flexShrink: 0,
+        }}>
+          <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logo.svg" alt="Super Pure Water" style={{ height: '36px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+            </div>
+          </div>
+          <nav style={{ padding: '12px 8px', flex: 1 }}>
+            {sidebarItems.map(item => (
+              <button
+                key={item.key}
+                onClick={() => setPage(item.key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                  padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 500,
+                  color: page === item.key ? 'var(--white)' : 'rgba(255,255,255,0.5)',
+                  background: page === item.key ? 'rgba(255,255,255,0.08)' : 'transparent',
+                  marginBottom: '2px', textAlign: 'left',
+                }}
+              >
+                {item.icon} {item.label}
+              </button>
+            ))}
+          </nav>
+          <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: '12px', opacity: 0.5, marginBottom: '4px' }}>Signed in as</div>
+            <div style={{ fontSize: '13px', fontWeight: 600 }}>{user.name}</div>
+            <button
+              onClick={() => { logout(); navigate('/') }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '10px' }}
+            >
+              <LogOut size={14} /> Sign out
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* Main */}
       <main style={{ flex: 1, background: 'var(--gray-50)', overflow: 'auto' }}>
-        <div style={{ padding: '32px' }}>
+        <div style={{ padding: mobile ? '16px' : '32px' }}>
           {/* Dashboard */}
           {page === 'dashboard' && (
             <>
               <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)', marginBottom: '24px' }}>Dashboard</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: mobile ? '10px' : '16px', marginBottom: mobile ? '20px' : '32px' }}>
                 {[
                   { label: 'Total Revenue', value: fmt(totalRevenue), icon: <DollarSign size={20} />, color: 'var(--blue)' },
                   { label: 'Your Cost', value: fmt(totalCost), icon: <ShoppingBag size={20} />, color: 'var(--amber)' },
@@ -1430,7 +1503,8 @@ function AdminPortal() {
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gray-100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--gray-900)' }}>Recent Orders</h3>
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: mobile ? '600px' : 'auto' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--gray-100)' }}>
                       {['Order', 'Customer', 'Type', 'Total', 'Your Cost', 'Profit', 'Status'].map(h => (
@@ -1465,6 +1539,7 @@ function AdminPortal() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             </>
           )}
@@ -1485,7 +1560,8 @@ function AdminPortal() {
                 background: 'var(--white)', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--gray-200)', overflow: 'hidden',
               }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: mobile ? '700px' : 'auto' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--gray-100)' }}>
                       {['Product', 'SKU', 'Source', showCost ? 'Your Cost' : null, 'Wholesale (Kris)', 'Retail', showCost ? 'Kris Margin' : null, showCost ? 'Retail Margin' : null, 'Stock'].filter(Boolean).map(h => (
@@ -1516,6 +1592,7 @@ function AdminPortal() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </>
           )}
@@ -1696,7 +1773,8 @@ function AdminPortal() {
                 background: 'var(--white)', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--gray-200)', overflow: 'hidden',
               }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: mobile ? '800px' : 'auto' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--gray-100)' }}>
                       <th style={{ padding: '12px 14px', width: '40px' }}>
@@ -1743,14 +1821,15 @@ function AdminPortal() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
 
               <div style={{
-                marginTop: '24px', padding: '20px', background: 'var(--white)',
+                marginTop: '24px', padding: mobile ? '16px' : '20px', background: 'var(--white)',
                 borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)',
               }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: 'var(--gray-900)' }}>How Pricing Works</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : '1fr 1fr 1fr', gap: mobile ? '10px' : '16px' }}>
                   <div style={{ padding: '16px', background: 'var(--red-light)', borderRadius: 'var(--radius-md)' }}>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Your Cost</div>
                     <div style={{ fontSize: '13px', color: 'var(--gray-700)' }}>What Printify or Fulfill Engine charges you. Only you see this.</div>
@@ -1948,6 +2027,7 @@ function RequestProductDetail({ product, onBack, onAdd }) {
   const [selColor, setSelColor] = useState(variants.colors[0] || '')
   const [selSize, setSelSize] = useState(variants.sizes[0] || '')
   const [selectedImageIdx, setSelectedImageIdx] = useState(0)
+  const mobile = useIsMobile()
   const images = colorImgs[selColor] || [product.image]
   const currentImg = images[selectedImageIdx] || images[0] || product.image
 
@@ -1961,14 +2041,14 @@ function RequestProductDetail({ product, onBack, onAdd }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
-        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: mobile ? '16px' : '40px 24px' }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gray-500)', fontSize: '14px', fontWeight: 500, marginBottom: mobile ? '16px' : '24px' }}>
           <ArrowLeft size={16} /> Back to products
         </button>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '32px', border: '1px solid var(--gray-200)', alignItems: 'start' }}>
-          <div style={{ position: 'sticky', top: '24px' }}>
+        <div style={{ display: mobile ? 'flex' : 'grid', flexDirection: 'column', gridTemplateColumns: mobile ? 'none' : '1fr 1fr', gap: mobile ? '20px' : '40px', background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: mobile ? '16px' : '32px', border: '1px solid var(--gray-200)', alignItems: 'start' }}>
+          <div style={{ position: mobile ? 'static' : 'sticky', top: '24px' }}>
             <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--gray-100)' }}>
-              <img src={currentImg} alt={product.name} style={{ width: '100%', height: '400px', objectFit: 'contain', padding: '20px' }} />
+              <img src={currentImg} alt={product.name} style={{ width: '100%', height: mobile ? '280px' : '400px', objectFit: 'contain', padding: mobile ? '12px' : '20px' }} />
             </div>
             {images.length > 1 && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -2049,6 +2129,7 @@ function EmployeeRequest() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [requests, setRequests] = useState([])
   const [submitted, setSubmitted] = useState(false)
+  const mobile = useIsMobile()
 
   if (selectedProduct) {
     return <RequestProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} onAdd={(item) => { setRequests(prev => [...prev, item]); setSelectedProduct(null) }} />
@@ -2119,7 +2200,7 @@ function EmployeeRequest() {
         </div>
 
         {/* Product Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: mobile ? '10px' : '16px' }}>
           {products.filter(p => p.active).map(product => (
             <div
               key={product.id}
@@ -2131,13 +2212,13 @@ function EmployeeRequest() {
               onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
             >
-              <div style={{ height: '180px', overflow: 'hidden', background: 'var(--gray-100)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ height: mobile ? '130px' : '180px', overflow: 'hidden', background: 'var(--gray-100)', padding: mobile ? '10px' : '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
-              <div style={{ padding: '16px' }}>
-                <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-900)' }}>{product.name}</p>
-                <p style={{ fontSize: '12px', color: 'var(--gray-400)', marginTop: '4px' }}>{product.category}</p>
-                <Btn size="sm" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product) }} style={{ width: '100%', marginTop: '12px' }}>
+              <div style={{ padding: mobile ? '10px' : '16px' }}>
+                <p style={{ fontSize: mobile ? '13px' : '14px', fontWeight: 700, color: 'var(--gray-900)' }}>{product.name}</p>
+                {!mobile && <p style={{ fontSize: '12px', color: 'var(--gray-400)', marginTop: '4px' }}>{product.category}</p>}
+                <Btn size="sm" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product) }} style={{ width: '100%', marginTop: mobile ? '8px' : '12px', ...(mobile ? { fontSize: '12px', padding: '6px 10px' } : {}) }}>
                   Select Options
                 </Btn>
               </div>
@@ -2153,12 +2234,12 @@ function EmployeeRequest() {
             padding: '16px 24px', zIndex: 100,
             boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
           }}>
-            <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: mobile ? 'column' : 'row', alignItems: mobile ? 'stretch' : 'center', gap: mobile ? '12px' : '16px' }}>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-900)' }}>
                   {requests.length} item{requests.length > 1 ? 's' : ''} selected
                 </span>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                {!mobile && <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
                   {requests.map((r, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
@@ -2172,7 +2253,7 @@ function EmployeeRequest() {
                       </button>
                     </div>
                   ))}
-                </div>
+                </div>}
               </div>
               <Btn
                 onClick={() => {
