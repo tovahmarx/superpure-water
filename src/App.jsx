@@ -448,7 +448,7 @@ function CustomerStore() {
     const matchCat = selectedCategory === 'All' || p.category === selectedCategory
     const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchCat && matchSearch
-  })
+  }).sort((a, b) => a.retailPrice - b.retailPrice)
 
   if (selectedProduct) {
     return <ProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} priceType="retail" />
