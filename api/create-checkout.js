@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { fulfillOrder } from './fulfill-order.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { items, priceType, creditApplied, customerEmail, shipping = 0 } = req.body
+    const { items, priceType, creditApplied, customerEmail, shipping = 0, shippingAddress } = req.body
 
     if (!items || !items.length) {
       return res.status(400).json({ error: 'No items provided' })
@@ -38,6 +39,7 @@ export default async function handler(req, res) {
           status: 'processing',
           items,
           customer_email: customerEmail,
+          shipping_address: shippingAddress || null,
         })
         .select()
         .single()
@@ -58,6 +60,22 @@ export default async function handler(req, res) {
       // If retail order, add credit for Kris
       if (priceType === 'retail') {
         await addRetailCredit(order, items)
+      }
+
+      // Submit to suppliers (same as webhook does for Stripe orders)
+      try {
+        const fulfillResults = await fulfillOrder(items, shippingAddress || {}, customerEmail || '', order.id)
+        console.log('Credit-order fulfillment results:', JSON.stringify(fulfillResults))
+
+        const fulfillmentStatus = {}
+        if (fulfillResults.fe) fulfillmentStatus.fe = fulfillResults.fe
+        if (fulfillResults.printify) fulfillmentStatus.printify = fulfillResults.printify
+
+        await supabase.from('orders').update({
+          fulfillment: fulfillmentStatus,
+        }).eq('id', order.id)
+      } catch (fulfillErr) {
+        console.error('Credit-order fulfillment error (order still saved):', fulfillErr)
       }
 
       return res.status(200).json({ success: true, orderId: order.id })

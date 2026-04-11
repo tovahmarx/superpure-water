@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu, Loader } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu, Loader, MapPin } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import COLOR_IMAGES from './colorImages.js'
 import './App.css'
@@ -169,8 +169,6 @@ async function syncPricingFromSupabase() {
     }
   } catch {}
 }
-
-const DEMO_ORDERS = []
 
 // ============================================================
 // HELPERS
@@ -787,6 +785,7 @@ function CartView({ onBack, priceType }) {
   const [useStoreCredit, setUseStoreCredit] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
   const [shipping, setShipping] = useState({ total: 0, breakdown: null, loading: true })
+  const [shippingAddress, setShippingAddress] = useState({ name: '', line1: '', line2: '', city: '', state: '', postal_code: '' })
   const mobile = useIsMobile()
 
   const isWholesale = priceType === 'wholesale'
@@ -810,7 +809,14 @@ function CartView({ onBack, priceType }) {
     return () => { cancelled = true }
   }, [cart.items])
 
+  const needsAddressForm = amountDue <= 0
+  const addressValid = shippingAddress.name && shippingAddress.line1 && shippingAddress.city && shippingAddress.state && shippingAddress.postal_code
+
   const handlePlaceOrder = async () => {
+    if (needsAddressForm && !addressValid) {
+      alert('Please fill in your shipping address.')
+      return
+    }
     setCheckingOut(true)
     try {
       const res = await fetch('/api/create-checkout', {
@@ -821,6 +827,7 @@ function CartView({ onBack, priceType }) {
           priceType,
           creditApplied,
           shipping: shipping.total,
+          ...(needsAddressForm && { shippingAddress }),
         }),
       })
       const data = await res.json()
@@ -990,6 +997,59 @@ function CartView({ onBack, priceType }) {
                 </span>
                 <span style={{ fontSize: '20px', fontWeight: 800 }}>{fmt(amountDue)}</span>
               </div>
+
+              {/* Shipping address form for credit-only orders (no Stripe to collect it) */}
+              {needsAddressForm && (
+                <div style={{ marginTop: '16px', padding: '16px', background: 'var(--gray-50)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <MapPin size={16} style={{ color: 'var(--gray-500)' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-900)' }}>Shipping Address</span>
+                  </div>
+                  {[
+                    { key: 'name', label: 'Full Name', placeholder: 'Kris Smith' },
+                    { key: 'line1', label: 'Address', placeholder: '123 Main St' },
+                    { key: 'line2', label: 'Apt / Suite', placeholder: 'Apt 4B', required: false },
+                    { key: 'city', label: 'City', placeholder: 'Phoenix' },
+                  ].map(f => (
+                    <input
+                      key={f.key}
+                      placeholder={f.placeholder}
+                      value={shippingAddress[f.key]}
+                      onChange={e => setShippingAddress(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      style={{
+                        width: '100%', padding: '10px 12px', marginBottom: '8px', fontSize: '14px',
+                        borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)',
+                        background: 'var(--white)', boxSizing: 'border-box',
+                      }}
+                    />
+                  ))}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      value={shippingAddress.state}
+                      onChange={e => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
+                      style={{
+                        flex: 1, padding: '10px 12px', fontSize: '14px',
+                        borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)',
+                        background: 'var(--white)', color: shippingAddress.state ? 'var(--gray-900)' : 'var(--gray-400)',
+                      }}
+                    >
+                      <option value="">State</option>
+                      {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <input
+                      placeholder="ZIP Code"
+                      value={shippingAddress.postal_code}
+                      onChange={e => setShippingAddress(prev => ({ ...prev, postal_code: e.target.value }))}
+                      style={{
+                        flex: 1, padding: '10px 12px', fontSize: '14px',
+                        borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)',
+                        background: 'var(--white)', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handlePlaceOrder}
                 disabled={checkingOut}
@@ -1112,7 +1172,7 @@ function OwnerPortal() {
   const navigate = useNavigate()
   const [page, setPage] = useState('products')
   const [products] = useState(loadProducts().filter(p => p.active))
-  const [orders] = useState(DEMO_ORDERS.filter(o => o.type === 'wholesale'))
+  const [orders] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
   const cart = useContext(CartContext)
@@ -1375,7 +1435,7 @@ function AdminPortal() {
   const navigate = useNavigate()
   const [page, setPage] = useState('dashboard')
   const [products, setProducts] = useState(loadProducts())
-  const [orders] = useState(DEMO_ORDERS)
+  const [orders] = useState([])
   const [showCost, setShowCost] = useState(true)
   const [editingProduct, setEditingProduct] = useState(null)
   const [selectedProducts, setSelectedProducts] = useState([])
