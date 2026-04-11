@@ -1083,20 +1083,19 @@ function CartView({ onBack, priceType }) {
 function LoginPage() {
   const { login, user } = useContext(AuthContext)
   const navigate = useNavigate()
-  const [role, setRole] = useState('owner')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (user) navigate(user.role === 'admin' ? '/admin' : '/wholesale')
+    if (user && user.role === 'owner') navigate('/wholesale')
   }, [user])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
-    const success = login(role, password)
+    const success = login('owner', password)
     if (success) {
-      navigate(role === 'admin' ? '/admin' : '/wholesale')
+      navigate('/wholesale')
     } else {
       setError('Invalid password')
     }
@@ -1114,38 +1113,9 @@ function LoginPage() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img src="/logo.svg" alt="Super Pure Water" style={{ height: '56px', width: 'auto', margin: '0 auto 12px', display: 'block' }} />
-          <p style={{ fontSize: '14px', color: 'var(--gray-500)', marginTop: '4px' }}>Sign in to your portal</p>
+          <p style={{ fontSize: '14px', color: 'var(--gray-500)', marginTop: '4px' }}>Owner Portal</p>
         </div>
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gray-700)', display: 'block', marginBottom: '6px' }}>Portal</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setRole('owner')}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 600,
-                  background: role === 'owner' ? 'var(--black)' : 'var(--gray-100)',
-                  color: role === 'owner' ? 'var(--white)' : 'var(--gray-600)',
-                  border: role === 'owner' ? 'none' : '1px solid var(--gray-200)',
-                }}
-              >
-                Owner (Kris)
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('admin')}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '13px', fontWeight: 600,
-                  background: role === 'admin' ? 'var(--black)' : 'var(--gray-100)',
-                  color: role === 'admin' ? 'var(--white)' : 'var(--gray-600)',
-                  border: role === 'admin' ? 'none' : '1px solid var(--gray-200)',
-                }}
-              >
-                Admin (Tovah)
-              </button>
-            </div>
-          </div>
           <Input
             label="Password"
             type="password"
@@ -1431,7 +1401,7 @@ function OwnerPortal() {
 // ADMIN PORTAL (TOVAH)
 // ============================================================
 function AdminPortal() {
-  const { user, logout } = useContext(AuthContext)
+  const { user, login, logout } = useContext(AuthContext)
   const navigate = useNavigate()
   const [page, setPage] = useState('dashboard')
   const [products, setProducts] = useState(loadProducts())
@@ -1441,9 +1411,22 @@ function AdminPortal() {
   const [selectedProducts, setSelectedProducts] = useState([])
   const [bulkMargin, setBulkMargin] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [adminPw, setAdminPw] = useState('')
+  const [adminErr, setAdminErr] = useState('')
   const mobile = useIsMobile()
 
-  if (!user || user.role !== 'admin') return <Navigate to="/login" />
+  if (!user || user.role !== 'admin') return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gray-50)' }}>
+      <form onSubmit={e => { e.preventDefault(); setAdminErr(''); if (!login('admin', adminPw)) setAdminErr('Invalid password') }} style={{
+        width: '100%', maxWidth: '360px', padding: '40px', background: 'var(--white)',
+        borderRadius: 'var(--radius-lg)', border: '1px solid var(--gray-200)', boxShadow: 'var(--shadow-lg)',
+      }}>
+        <Input label="Password" type="password" value={adminPw} onChange={e => setAdminPw(e.target.value)} placeholder="Enter password" />
+        {adminErr && <p style={{ color: 'var(--red)', fontSize: '13px', marginTop: '8px' }}>{adminErr}</p>}
+        <Btn type="submit" size="lg" style={{ width: '100%', marginTop: '16px' }}>Sign In</Btn>
+      </form>
+    </div>
+  )
 
   const totalRevenue = orders.reduce((s, o) => s + o.total, 0)
   const totalCost = orders.reduce((s, o) => {
