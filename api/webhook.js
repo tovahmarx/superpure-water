@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { fulfillOrder } from './fulfill-order.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -58,14 +59,25 @@ export default async function handler(req, res) {
     // Retrieve line items for full details
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id)
 
-    const items = lineItems.data.map((li, idx) => ({
-      name: li.description,
-      qty: li.quantity,
-      price: li.amount_total / 100 / li.quantity,
-      productId: orderItems[idx]?.productId || null,
-    }))
+    // Filter out the shipping line item
+    const items = lineItems.data
+      .filter(li => li.description !== 'Shipping')
+      .map((li, idx) => ({
+        name: li.description,
+        qty: li.quantity,
+        price: li.amount_total / 100 / li.quantity,
+        productId: orderItems[idx]?.productId || null,
+        color: orderItems[idx]?.color || '',
+        size: orderItems[idx]?.size || '',
+        source: orderItems[idx]?.source || '',
+      }))
 
     const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0)
+
+    // Get shipping address from Stripe session
+    const shippingDetails = session.shipping_details || session.shipping || {}
+    const shippingAddress = shippingDetails.address || {}
+    shippingAddress.name = shippingDetails.name || session.customer_details?.name || ''
 
     // Create order in Supabase
     const { data: order, error: orderErr } = await supabase
@@ -81,6 +93,7 @@ export default async function handler(req, res) {
         amount_charged: session.amount_total / 100,
         status: 'processing',
         items,
+        shipping_address: shippingAddress,
       })
       .select()
       .single()
@@ -133,6 +146,25 @@ export default async function handler(req, res) {
     }
 
     console.log('Order created:', order.id)
+
+    // Submit to suppliers (Fulfill Engine + Printify)
+    try {
+      const customerEmail = session.customer_details?.email || ''
+      const fulfillResults = await fulfillOrder(items, shippingAddress, customerEmail, order.id)
+      console.log('Fulfillment results:', JSON.stringify(fulfillResults))
+
+      // Update order with fulfillment status
+      const fulfillmentStatus = {}
+      if (fulfillResults.fe) fulfillmentStatus.fe = fulfillResults.fe
+      if (fulfillResults.printify) fulfillmentStatus.printify = fulfillResults.printify
+
+      await supabase.from('orders').update({
+        fulfillment: fulfillmentStatus,
+      }).eq('id', order.id)
+    } catch (fulfillErr) {
+      console.error('Fulfillment error (order still saved):', fulfillErr)
+      // Don't fail the webhook — order is saved, fulfillment can be retried
+    }
   }
 
   return res.status(200).json({ received: true })

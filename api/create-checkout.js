@@ -114,7 +114,7 @@ export default async function handler(req, res) {
       metadata: {
         priceType,
         creditApplied: String(creditApplied || 0),
-        itemsJson: JSON.stringify(items.map(i => ({ name: i.name, qty: i.qty, productId: i.productId }))),
+        itemsJson: JSON.stringify(items.map(i => ({ name: i.name, qty: i.qty, productId: i.productId, color: i.color, size: i.size, source: i.source }))),
       },
     })
 
