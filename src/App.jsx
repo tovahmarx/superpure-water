@@ -434,13 +434,17 @@ function Input({ label, ...props }) {
 // CUSTOMER STOREFRONT
 // ============================================================
 function CustomerStore() {
-  const [products] = useState(loadProducts().filter(p => p.active))
+  const [products, setProducts] = useState(loadProducts().filter(p => p.active))
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
   const cart = useContext(CartContext)
   const mobile = useIsMobile()
+
+  useEffect(() => {
+    syncPricingFromSupabase().then(() => setProducts(loadProducts().filter(p => p.active)))
+  }, [])
 
   const categories = ['All', ...new Set(products.map(p => p.category))]
   const filtered = products.filter(p => {
@@ -1141,7 +1145,11 @@ function OwnerPortal() {
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
   const [page, setPage] = useState('products')
-  const [products] = useState(loadProducts().filter(p => p.active))
+  const [products, setProducts] = useState(loadProducts().filter(p => p.active))
+
+  useEffect(() => {
+    syncPricingFromSupabase().then(() => setProducts(loadProducts().filter(p => p.active)))
+  }, [])
   const [orders] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
