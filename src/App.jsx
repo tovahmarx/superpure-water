@@ -616,6 +616,9 @@ function CustomerStore() {
         background: 'var(--gray-900)', color: 'var(--gray-400)', padding: '40px 24px',
         textAlign: 'center', marginTop: '40px',
       }}>
+        <Link to="/login" style={{ display: 'inline-block', fontSize: '13px', color: 'var(--gray-500)', marginBottom: '12px' }}>
+          Wholesale Login
+        </Link>
         <p style={{ fontSize: '13px' }}>
           Super Pure Water &copy; 2026. Powered by Create & Source.
         </p>
