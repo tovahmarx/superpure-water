@@ -52,7 +52,7 @@ async function submitFEOrder(items, shippingAddress, customerEmail, orderId) {
   const orderItemGroups = items.map(item => {
     const catalog = PRODUCT_CATALOG[item.productId]
     return {
-      catalogProductId: catalog.sku,
+      catalogProductId: catalog ? catalog.sku : item.productId,
       productColor: item.color || '',
       productSize: item.size || '',
       quantity: item.qty,
@@ -189,20 +189,25 @@ async function submitPrintifyOrder(items, shippingAddress, customerEmail, orderI
 export async function fulfillOrder(orderItems, shippingAddress, customerEmail, orderId) {
   const results = { fe: null, printify: null }
 
-  // Split items by source
+  // Split items by source — check hardcoded catalog first, fall back to item.source
   const feItems = []
   const printifyItems = []
 
   for (const item of orderItems) {
     const catalog = PRODUCT_CATALOG[item.productId]
-    if (!catalog) {
-      console.warn(`Unknown product ID: ${item.productId}`)
-      continue
-    }
-    if (catalog.source === 'FE') {
+    if (catalog) {
+      if (catalog.source === 'FE') {
+        feItems.push(item)
+      } else {
+        printifyItems.push(item)
+      }
+    } else if (item.source === 'Fulfill Engine' || item.source === 'FE') {
+      // New synced product not in hardcoded catalog — use product UUID directly
       feItems.push(item)
-    } else {
+    } else if (item.source === 'Printify') {
       printifyItems.push(item)
+    } else {
+      console.warn(`Unknown product ID and no source: ${item.productId}`)
     }
   }
 

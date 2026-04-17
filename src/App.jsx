@@ -258,11 +258,12 @@ function CartProvider({ children }) {
 
   // Backfill source for old cart items loaded from localStorage
   useEffect(() => {
+    const allProducts = loadProducts()
     setItems(prev => {
       let changed = false
       const updated = prev.map(item => {
         if (!item.source) {
-          const prod = INITIAL_PRODUCTS.find(p => p.id === item.productId)
+          const prod = allProducts.find(p => p.id === item.productId)
           if (prod) { changed = true; return { ...item, source: prod.source } }
         }
         return item
