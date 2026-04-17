@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu, Loader, MapPin } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, LogOut, Package, DollarSign, Users, BarChart3, Eye, EyeOff, Settings, ChevronRight, Search, Filter, ArrowLeft, Check, X, Edit2, Save, Droplets, ShoppingBag, Truck, CreditCard, Menu, Loader, MapPin, RefreshCw } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import COLOR_IMAGES from './colorImages.js'
 import './App.css'
@@ -118,15 +118,33 @@ const PRODUCT_VARIANTS = {
 // Load saved pricing — checks localStorage first (instant), Supabase syncs in background
 function loadProducts() {
   const saved = localStorage.getItem('spw_pricing')
-  if (saved) {
-    const pricing = JSON.parse(saved)
-    return INITIAL_PRODUCTS.map(p => ({
-      ...p,
-      wholesalePrice: pricing[p.id]?.wholesalePrice ?? p.wholesalePrice,
-      retailPrice: pricing[p.id]?.retailPrice ?? p.retailPrice,
-    }))
+  const savedSynced = localStorage.getItem('spw_synced_products')
+  const pricing = saved ? JSON.parse(saved) : {}
+
+  // Start with hardcoded products, apply saved pricing
+  const baseProducts = INITIAL_PRODUCTS.map(p => ({
+    ...p,
+    wholesalePrice: pricing[p.id]?.wholesalePrice ?? p.wholesalePrice,
+    retailPrice: pricing[p.id]?.retailPrice ?? p.retailPrice,
+  }))
+
+  // Add any synced products that aren't in the hardcoded list
+  if (savedSynced) {
+    const syncedProducts = JSON.parse(savedSynced)
+    const existingIds = new Set(baseProducts.map(p => p.id))
+    const existingSkus = new Set(baseProducts.map(p => p.sku))
+    for (const p of syncedProducts) {
+      if (!existingIds.has(p.id) && !existingSkus.has(p.sku)) {
+        baseProducts.push({
+          ...p,
+          wholesalePrice: pricing[p.id]?.wholesalePrice ?? p.wholesalePrice,
+          retailPrice: pricing[p.id]?.retailPrice ?? p.retailPrice,
+        })
+      }
+    }
   }
-  return INITIAL_PRODUCTS
+
+  return baseProducts
 }
 
 // Save pricing to both localStorage and Supabase
@@ -1424,7 +1442,67 @@ function AdminPortal() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [adminPw, setAdminPw] = useState('')
   const [adminErr, setAdminErr] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
   const mobile = useIsMobile()
+
+  async function syncProducts() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/sync-products')
+      if (!res.ok) throw new Error(`Sync failed (${res.status})`)
+      const data = await res.json()
+
+      if (data.products && data.products.length > 0) {
+        // Merge: keep existing product pricing if already in our list, add new ones
+        const existingIds = new Set(products.map(p => p.id))
+        const existingSkus = new Set(products.map(p => p.sku))
+        let newCount = 0
+
+        const merged = [...products]
+        for (const p of data.products) {
+          if (!existingIds.has(p.id) && !existingSkus.has(p.sku)) {
+            merged.push(p)
+            newCount++
+          }
+        }
+
+        setProducts(merged)
+        savePricing(merged)
+
+        // Persist synced products so they reload on refresh
+        const hardcodedIds = new Set(INITIAL_PRODUCTS.map(p => p.id))
+        const syncedOnly = merged.filter(p => !hardcodedIds.has(p.id))
+        localStorage.setItem('spw_synced_products', JSON.stringify(syncedOnly))
+
+        // Also update variants in localStorage for new products
+        if (data.variants) {
+          const savedVariants = JSON.parse(localStorage.getItem('spw_variants') || '{}')
+          const mergedVariants = { ...savedVariants, ...data.variants }
+          localStorage.setItem('spw_variants', JSON.stringify(mergedVariants))
+        }
+
+        setSyncResult({
+          success: true,
+          message: newCount > 0
+            ? `Synced! ${newCount} new product${newCount > 1 ? 's' : ''} added (${data.counts.fulfillEngine} FE, ${data.counts.printify} Printify total)`
+            : `All ${data.counts.total} products already up to date`,
+          errors: data.errors,
+        })
+      } else {
+        setSyncResult({
+          success: false,
+          message: 'No products returned from APIs',
+          errors: data.errors,
+        })
+      }
+    } catch (err) {
+      setSyncResult({ success: false, message: err.message })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   if (!user || user.role !== 'admin') return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gray-50)' }}>
@@ -1619,12 +1697,29 @@ function AdminPortal() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gray-900)' }}>Products</h2>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                  <Btn variant="outline" size="sm" onClick={syncProducts} disabled={syncing}>
+                    <RefreshCw size={14} style={syncing ? { animation: 'spin 1s linear infinite' } : {}} />
+                    {syncing ? 'Syncing...' : 'Sync Products'}
+                  </Btn>
                   <Btn variant="outline" size="sm" onClick={() => setShowCost(!showCost)}>
                     {showCost ? <EyeOff size={14} /> : <Eye size={14} />}
                     {showCost ? 'Hide Costs' : 'Show Costs'}
                   </Btn>
                 </div>
               </div>
+              {syncResult && (
+                <div style={{
+                  padding: '12px 16px', marginBottom: '16px', borderRadius: 'var(--radius-md)',
+                  fontSize: '13px', fontWeight: 500,
+                  background: syncResult.success ? '#ecfdf5' : '#fef2f2',
+                  color: syncResult.success ? '#065f46' : '#991b1b',
+                  border: `1px solid ${syncResult.success ? '#a7f3d0' : '#fecaca'}`,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <span>{syncResult.message}</span>
+                  <button onClick={() => setSyncResult(null)} style={{ color: 'inherit', opacity: 0.5 }}><X size={14} /></button>
+                </div>
+              )}
               <div style={{
                 background: 'var(--white)', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--gray-200)', overflow: 'hidden',
