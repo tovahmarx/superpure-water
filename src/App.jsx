@@ -194,6 +194,19 @@ async function syncPricingFromSupabase() {
 const fmt = (n) => '$' + Number(n).toFixed(2)
 const pct = (cost, sell) => (((sell - cost) / cost) * 100).toFixed(0) + '%'
 
+// Get variants — checks hardcoded first, then synced from localStorage
+function getVariants(productId) {
+  if (PRODUCT_VARIANTS[productId]) return PRODUCT_VARIANTS[productId]
+  try {
+    const saved = localStorage.getItem('spw_variants')
+    if (saved) {
+      const synced = JSON.parse(saved)
+      if (synced[productId]) return synced[productId]
+    }
+  } catch {}
+  return { sizes: [], colors: [] }
+}
+
 // ============================================================
 // AUTH PROVIDER
 // ============================================================
@@ -651,7 +664,7 @@ function CustomerStore() {
 function ProductDetail({ product, onBack, priceType }) {
   const cart = useContext(CartContext)
   const [qty, setQty] = useState(1)
-  const variants = PRODUCT_VARIANTS[product.id] || { sizes: [], colors: [] }
+  const variants = getVariants(product.id)
   const colorImgs = COLOR_IMAGES[product.id] || {}
   const [selectedColor, setSelectedColor] = useState(variants.colors[0] || '')
   const [selectedSize, setSelectedSize] = useState(variants.sizes[0] || '')
@@ -2186,7 +2199,7 @@ function EmployeeRequestsView() {
 // REQUEST PRODUCT DETAIL (for employee request page)
 // ============================================================
 function RequestProductDetail({ product, onBack, onAdd }) {
-  const variants = PRODUCT_VARIANTS[product.id] || { sizes: [], colors: [] }
+  const variants = getVariants(product.id)
   const colorImgs = COLOR_IMAGES[product.id] || {}
   const [selColor, setSelColor] = useState(variants.colors[0] || '')
   const [selSize, setSelSize] = useState(variants.sizes[0] || '')

@@ -1,24 +1,17 @@
 // Sync products from Fulfill Engine + Printify APIs
 // Returns normalized product list with pricing, images, variants
 
-const FE_API_KEY = process.env.FULFILL_ENGINE_API_KEY
-const FE_ACCOUNT_ID = 'act-9679744'
-const FE_CAMPAIGN_ID = '1ee36d04-dcd2-4568-8b37-794f077a1f5f'
-
 const PRINTIFY_API_KEY = process.env.PRINTIFY_API_KEY
 const PRINTIFY_SHOP_ID = '26705492'
 
+// Fulfill Engine public storefront API — no API key needed
+const FE_STORE_SLUG = 'super-pure-water'
+
 async function fetchFEProducts() {
   try {
-    // Fetch campaign products from Fulfill Engine
     const res = await fetch(
-      `https://api.fulfillengine.com/api/accounts/${FE_ACCOUNT_ID}/campaigns/${FE_CAMPAIGN_ID}`,
-      {
-        headers: {
-          'X-API-KEY': FE_API_KEY,
-          'Content-Type': 'application/json',
-        },
-      }
+      `https://api.fulfillengine.com/shop/campaigns/${FE_STORE_SLUG}`,
+      { headers: { 'Accept': 'application/json' } }
     )
 
     if (!res.ok) {
@@ -28,60 +21,58 @@ async function fetchFEProducts() {
     }
 
     const data = await res.json()
+    const feProducts = data.products || []
     const products = []
     const variants = {}
 
-    // FE returns campaign with products array
-    const feProducts = data.products || data.catalogProducts || data.items || []
-
     for (const p of feProducts) {
-      const id = p.id || p.productId || p.catalogProductId
-      const sku = p.catalogProductId || p.sku || p.styleNumber || ''
-      const name = p.name || p.productName || p.title || ''
+      const id = p.id
+      const name = p.name || ''
       const description = p.description || ''
-      const costPrice = Number(p.cost || p.costPrice || p.unitCost || p.price || 0)
+      const costPrice = Number(p.salesBasePrice || p.defaultPrice || 0)
 
-      // Get image - try multiple possible fields
+      // Get image from first color option's front image
       let image = ''
-      if (p.images && p.images.length) {
-        image = p.images[0].url || p.images[0].src || p.images[0]
-      } else if (p.image) {
-        image = p.image.url || p.image.src || p.image
-      } else if (p.thumbnailUrl) {
-        image = p.thumbnailUrl
-      } else if (p.primaryImageUrl) {
-        image = p.primaryImageUrl
+      for (const opt of (p.options || [])) {
+        if (image) break
+        for (const val of (opt.optionValues || [])) {
+          if (image) break
+          for (const img of (val.images || [])) {
+            if (img.imageType === 'Front' && img.url) {
+              image = img.url
+              break
+            }
+          }
+        }
       }
 
-      // Get category
-      const category = p.category || p.productCategory || p.type || 'Uncategorized'
-
-      // Get sizes and colors
+      // Extract sizes and colors from options
       const sizes = []
       const colors = []
-      if (p.variants) {
-        for (const v of p.variants) {
-          if (v.size && !sizes.includes(v.size)) sizes.push(v.size)
-          if (v.color && !colors.includes(v.color)) colors.push(v.color)
+      for (const opt of (p.options || [])) {
+        if (opt.name === 'Size' || opt.optionType === 0) {
+          for (const val of (opt.optionValues || [])) {
+            if (val.name && !sizes.includes(val.name)) sizes.push(val.name)
+          }
         }
-      } else if (p.availableSizes) {
-        sizes.push(...(Array.isArray(p.availableSizes) ? p.availableSizes : []))
-      }
-      if (p.availableColors) {
-        colors.push(...(Array.isArray(p.availableColors) ? p.availableColors : []))
+        if (opt.name === 'Color' || opt.optionType === 1) {
+          for (const val of (opt.optionValues || [])) {
+            if (val.name && !colors.includes(val.name)) colors.push(val.name)
+          }
+        }
       }
 
       products.push({
         id,
-        catalogProductId: sku,
+        catalogProductId: id,
         name,
         description,
         image,
-        category,
+        category: guessCategory(name),
         costPrice,
-        wholesalePrice: Math.round(costPrice * 1.33 * 100) / 100, // Default 33% markup
-        retailPrice: Math.round(costPrice * 1.69 * 100) / 100,    // Default 69% markup
-        sku,
+        wholesalePrice: Math.round(costPrice * 1.33 * 100) / 100,
+        retailPrice: Math.round(costPrice * 1.69 * 100) / 100,
+        sku: `FE-${id.substring(0, 8).toUpperCase()}`,
         source: 'Fulfill Engine',
         active: true,
       })
@@ -104,13 +95,10 @@ async function fetchPrintifyProducts() {
     let currentPage = 1
     let hasMore = true
 
-    // Paginate through all Printify products
     while (hasMore) {
       const res = await fetch(
         `https://api.printify.com/v1/shops/${PRINTIFY_SHOP_ID}/products.json?page=${currentPage}&limit=50`,
-        {
-          headers: { 'Authorization': `Bearer ${PRINTIFY_API_KEY}` },
-        }
+        { headers: { 'Authorization': `Bearer ${PRINTIFY_API_KEY}` } }
       )
 
       if (!res.ok) {
@@ -159,7 +147,6 @@ async function fetchPrintifyProducts() {
         }
 
         for (const v of enabledVariants) {
-          // Parse title like "Black / S"
           if (v.title) {
             const parts = v.title.split(' / ')
             if (parts[0] && !colors.includes(parts[0])) colors.push(parts[0])
@@ -168,14 +155,13 @@ async function fetchPrintifyProducts() {
         }
       }
 
-      // Derive SKU from blueprint
       const sku = p.tags?.[0] || `P-${id.substring(0, 6)}`
 
       products.push({
         id,
         catalogProductId: sku,
         name,
-        description: description.replace(/<[^>]*>/g, '').substring(0, 200), // Strip HTML
+        description: description.replace(/<[^>]*>/g, '').substring(0, 200),
         image,
         category: guessCategory(name),
         costPrice,
@@ -200,15 +186,17 @@ async function fetchPrintifyProducts() {
 
 function guessCategory(name) {
   const n = name.toLowerCase()
-  if (n.includes('hoodie') || n.includes('pullover') || n.includes('sweatshirt')) return 'Hoodies'
-  if (n.includes('tee') || n.includes('t-shirt') || n.includes('tshirt')) return 'Tees'
+  if (n.includes('hoodie') || n.includes('sweatshirt')) return 'Hoodies'
+  if (n.includes('tee') || n.includes('t-shirt') || n.includes('tshirt') || n.includes('v-neck')) return 'Tees'
+  if (n.includes('tank')) return 'Tanks'
   if (n.includes('polo')) return 'Polos'
   if (n.includes('short')) return 'Shorts'
   if (n.includes('pant') || n.includes('jogger')) return 'Pants'
-  if (n.includes('quarter') || n.includes('1/4') || n.includes('zip')) return 'Quarter-Zips'
+  if (n.includes('quarter') || n.includes('1/4') || n.includes('zip') || n.includes('pullover') || n.includes('fleece')) return 'Quarter-Zips'
   if (n.includes('hat') || n.includes('cap') || n.includes('beanie')) return 'Hats'
-  if (n.includes('bag') || n.includes('tote') || n.includes('backpack') || n.includes('duffel')) return 'Bags'
-  if (n.includes('tumbler') || n.includes('bottle') || n.includes('mug')) return 'Accessories'
+  if (n.includes('bag') || n.includes('tote') || n.includes('backpack') || n.includes('duffel') || n.includes('crossbody')) return 'Bags'
+  if (n.includes('tumbler') || n.includes('bottle') || n.includes('mug') || n.includes('speaker')) return 'Accessories'
+  if (n.includes('towel')) return 'Towels'
   return 'Apparel'
 }
 
