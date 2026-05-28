@@ -49,6 +49,18 @@ export default async function handler(req, res) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
 
+    // Idempotency: skip if we already processed this session
+    const { data: existing } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('stripe_session_id', session.id)
+      .maybeSingle()
+
+    if (existing) {
+      console.log('Duplicate webhook — order already exists for session:', session.id)
+      return res.status(200).json({ received: true, duplicate: true })
+    }
+
     const priceType = session.metadata?.priceType || 'retail'
     const creditApplied = Number(session.metadata?.creditApplied || 0)
     let orderItems = []

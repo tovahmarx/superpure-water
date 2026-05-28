@@ -148,17 +148,19 @@ function loadProducts() {
 }
 
 // Save pricing to both localStorage and Supabase
-function savePricing(products) {
+function savePricing(products, authToken) {
   const pricing = {}
   products.forEach(p => {
     pricing[p.id] = { wholesalePrice: p.wholesalePrice, retailPrice: p.retailPrice }
   })
   localStorage.setItem('spw_pricing', JSON.stringify(pricing))
 
-  // Sync to Supabase in background
+  // Sync to Supabase in background (auth required)
+  const headers = { 'Content-Type': 'application/json' }
+  if (authToken) headers['X-Auth-Token'] = authToken
   fetch('/api/pricing', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       products: products.map(p => ({
         product_id: p.id,
@@ -215,30 +217,36 @@ function AuthProvider({ children }) {
     const saved = localStorage.getItem('spw_user')
     return saved ? JSON.parse(saved) : null
   })
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('spw_token') || null)
 
-  const login = (role, password) => {
-    if (role === 'admin' && password === 'tovah2026') {
-      const u = { role: 'admin', name: 'Tovah', email: 'tovah@brandsbystatus.com' }
-      setUser(u)
-      localStorage.setItem('spw_user', JSON.stringify(u))
+  const login = async (role, password) => {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, password }),
+      })
+      if (!res.ok) return false
+      const data = await res.json()
+      setUser(data.user)
+      setAuthToken(data.token)
+      localStorage.setItem('spw_user', JSON.stringify(data.user))
+      localStorage.setItem('spw_token', data.token)
       return true
+    } catch {
+      return false
     }
-    if (role === 'owner' && password === 'kris2026') {
-      const u = { role: 'owner', name: 'Kris', email: 'kris@superpurewater.com' }
-      setUser(u)
-      localStorage.setItem('spw_user', JSON.stringify(u))
-      return true
-    }
-    return false
   }
 
   const logout = () => {
     setUser(null)
+    setAuthToken(null)
     localStorage.removeItem('spw_user')
+    localStorage.removeItem('spw_token')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, authToken }}>
       {children}
     </AuthContext.Provider>
   )
@@ -1129,10 +1137,10 @@ function LoginPage() {
     if (user && user.role === 'owner') navigate('/wholesale')
   }, [user])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    const success = login('owner', password)
+    const success = await login('owner', password)
     if (success) {
       navigate('/wholesale')
     } else {
@@ -1185,12 +1193,30 @@ function OwnerPortal() {
   useEffect(() => {
     syncPricingFromSupabase().then(() => setProducts(loadProducts().filter(p => p.active)))
   }, [])
-  const [orders] = useState([])
+  const [orders, setOrders] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showCart, setShowCart] = useState(false)
   const cart = useContext(CartContext)
   const credit = useContext(CreditContext)
   const mobile = useIsMobile()
+
+  // Load wholesale orders from Supabase
+  useEffect(() => {
+    supabase
+      .from('orders')
+      .select('*')
+      .eq('price_type', 'wholesale')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setOrders(data.map(o => ({
+          id: o.id,
+          total: Number(o.amount_charged) + Number(o.credit_applied || 0),
+          status: o.status || 'processing',
+          date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          items: o.items || [],
+        })))
+      })
+  }, [])
 
   if (!user || user.role !== 'owner') return <Navigate to="/login" />
 
@@ -1444,11 +1470,11 @@ function OwnerPortal() {
 // ADMIN PORTAL (TOVAH)
 // ============================================================
 function AdminPortal() {
-  const { user, login, logout } = useContext(AuthContext)
+  const { user, login, logout, authToken } = useContext(AuthContext)
   const navigate = useNavigate()
   const [page, setPage] = useState('dashboard')
   const [products, setProducts] = useState(loadProducts())
-  const [orders] = useState([])
+  const [orders, setOrders] = useState([])
   const [showCost, setShowCost] = useState(true)
   const [editingProduct, setEditingProduct] = useState(null)
   const [selectedProducts, setSelectedProducts] = useState([])
@@ -1459,6 +1485,28 @@ function AdminPortal() {
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
   const mobile = useIsMobile()
+
+  // Load orders from Supabase
+  useEffect(() => {
+    supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setOrders(data.map(o => ({
+          id: o.id,
+          customer: o.customer_name || o.customer_email || 'Guest',
+          email: o.customer_email || '',
+          type: o.price_type,
+          total: Number(o.amount_charged) + Number(o.credit_applied || 0),
+          status: o.status || 'processing',
+          date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          items: o.items || [],
+          creditApplied: Number(o.credit_applied || 0),
+          fulfillment: o.fulfillment,
+        })))
+      })
+  }, [])
 
   async function syncProducts() {
     setSyncing(true)
@@ -1483,7 +1531,7 @@ function AdminPortal() {
         }
 
         setProducts(merged)
-        savePricing(merged)
+        savePricing(merged, authToken)
 
         // Persist synced products so they reload on refresh
         const hardcodedIds = new Set(INITIAL_PRODUCTS.map(p => p.id))
@@ -1520,7 +1568,7 @@ function AdminPortal() {
 
   if (!user || user.role !== 'admin') return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--gray-50)' }}>
-      <form onSubmit={e => { e.preventDefault(); setAdminErr(''); if (!login('admin', adminPw)) setAdminErr('Invalid password') }} style={{
+      <form onSubmit={async e => { e.preventDefault(); setAdminErr(''); if (!(await login('admin', adminPw))) setAdminErr('Invalid password') }} style={{
         width: '100%', maxWidth: '360px', padding: '40px', background: 'var(--white)',
         borderRadius: 'var(--radius-lg)', border: '1px solid var(--gray-200)', boxShadow: 'var(--shadow-lg)',
       }}>
@@ -1742,7 +1790,7 @@ function AdminPortal() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: mobile ? '700px' : 'auto' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--gray-100)' }}>
-                      {['Product', 'SKU', 'Source', showCost ? 'Your Cost' : null, 'Wholesale (Kris)', 'Retail', showCost ? 'Kris Margin' : null, showCost ? 'Retail Margin' : null, 'Stock'].filter(Boolean).map(h => (
+                      {['Product', 'SKU', 'Source', showCost ? 'Your Cost' : null, 'Wholesale (Kris)', 'Retail', showCost ? 'Kris Margin' : null, showCost ? 'Retail Margin' : null].filter(Boolean).map(h => (
                         <th key={h} style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--gray-500)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {h}
                         </th>
@@ -1765,7 +1813,6 @@ function AdminPortal() {
                         <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: 600 }}>{fmt(p.retailPrice)}</td>
                         {showCost && <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--green)' }}>{pct(p.costPrice, p.wholesalePrice)}</td>}
                         {showCost && <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: 600, color: 'var(--green)' }}>{pct(p.costPrice, p.retailPrice)}</td>}
-                        <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: 600 }}>{p.stock}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1881,7 +1928,7 @@ function AdminPortal() {
                           ? { ...p, wholesalePrice: Math.round(p.costPrice * (1 + pct) * 100) / 100 }
                           : p
                       )
-                      savePricing(updated)
+                      savePricing(updated, authToken)
                       return updated
                     })
                   }}
@@ -1906,7 +1953,7 @@ function AdminPortal() {
                         const base = p.wholesalePrice > 0 ? p.wholesalePrice : p.costPrice
                         return { ...p, retailPrice: Math.round(base * (1 + pct) * 100) / 100 }
                       })
-                      savePricing(updated)
+                      savePricing(updated, authToken)
                       return updated
                     })
                   }}
@@ -1931,7 +1978,7 @@ function AdminPortal() {
                         const ws = Math.round(p.costPrice * (1 + pct) * 100) / 100
                         return { ...p, wholesalePrice: ws, retailPrice: Math.round(ws * (1 + pct) * 100) / 100 }
                       })
-                      savePricing(updated)
+                      savePricing(updated, authToken)
                       return updated
                     })
                   }}
@@ -1988,7 +2035,7 @@ function AdminPortal() {
                               const updated = prev.map(prod =>
                                 prod.id === p.id ? { ...prod, ...updates } : prod
                               )
-                              savePricing(updated)
+                              savePricing(updated, authToken)
                               return updated
                             })
                             setEditingProduct(null)
@@ -2123,14 +2170,34 @@ function PricingRow({ product, isEditing, selected, onToggle, onEdit, onSave, on
 // EMPLOYEE REQUESTS VIEW (shown in Kris's owner portal)
 // ============================================================
 function EmployeeRequestsView() {
-  const [requests, setRequests] = useState(() => JSON.parse(localStorage.getItem('spw_requests') || '[]'))
+  const [requests, setRequests] = useState([])
 
-  const updateStatus = (idx, status) => {
-    setRequests(prev => {
-      const updated = prev.map((r, i) => i === idx ? { ...r, status } : r)
-      localStorage.setItem('spw_requests', JSON.stringify(updated))
-      return updated
-    })
+  useEffect(() => {
+    supabase
+      .from('employee_requests')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setRequests(data.map(r => ({
+          id: r.id,
+          employee: r.employee_name,
+          items: r.items || [],
+          status: r.status || 'pending',
+          date: r.created_at,
+        })))
+      })
+  }, [])
+
+  const updateStatus = async (idx, status) => {
+    const req = requests[idx]
+    if (!req) return
+    const { error } = await supabase
+      .from('employee_requests')
+      .update({ status, reviewed_at: new Date().toISOString() })
+      .eq('id', req.id)
+    if (!error) {
+      setRequests(prev => prev.map((r, i) => i === idx ? { ...r, status } : r))
+    }
   }
 
   return (
@@ -2434,12 +2501,19 @@ function EmployeeRequest() {
                 </div>}
               </div>
               <Btn
-                onClick={() => {
+                onClick={async () => {
                   if (!name.trim()) { alert('Please enter your name'); return }
-                  // Save to localStorage for now (will move to Supabase)
-                  const saved = JSON.parse(localStorage.getItem('spw_requests') || '[]')
-                  saved.push({ employee: name, items: requests, date: new Date().toISOString(), status: 'pending' })
-                  localStorage.setItem('spw_requests', JSON.stringify(saved))
+                  const { error } = await supabase
+                    .from('employee_requests')
+                    .insert({
+                      employee_name: name,
+                      items: requests,
+                      status: 'pending',
+                    })
+                  if (error) {
+                    alert('Failed to submit request. Please try again.')
+                    return
+                  }
                   setSubmitted(true)
                 }}
                 style={{ padding: '12px 32px' }}

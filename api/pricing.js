@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { verifyAuth } from './auth.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -13,7 +14,12 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    // Expect { products: [{ product_id, wholesale_price, retail_price }] }
+    // Auth required for price changes
+    const user = verifyAuth(req)
+    if (!user || user.role !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
     const { products } = req.body
     if (!products || !products.length) {
       return res.status(400).json({ error: 'No products provided' })
