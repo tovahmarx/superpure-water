@@ -82,17 +82,19 @@ export default async function handler(req, res) {
     }
 
     // Create Stripe Checkout Session
-    const lineItems = items.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.name,
-          description: [item.color, item.size].filter(Boolean).join(' / ') || undefined,
+    const lineItems = items.map(item => {
+      const productData = { name: item.name }
+      const desc = [item.color, item.size].filter(Boolean).join(' / ')
+      if (desc) productData.description = desc
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: productData,
+          unit_amount: Math.round(item.price * 100),
         },
-        unit_amount: Math.round(item.price * 100),
-      },
-      quantity: item.qty,
-    }))
+        quantity: item.qty,
+      }
+    })
 
     // Add shipping as a line item if > 0
     if (shipping > 0) {
@@ -124,25 +126,23 @@ export default async function handler(req, res) {
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: lineItems,
-      discounts,
-      customer_email: customerEmail || undefined,
+      ...(discounts.length > 0 && { discounts }),
+      ...(customerEmail && { customer_email: customerEmail }),
       shipping_address_collection: { allowed_countries: ['US'] },
       success_url: `${origin}/order-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${priceType === 'wholesale' ? 'wholesale' : ''}`,
       metadata: {
         priceType,
         creditApplied: String(creditApplied || 0),
-        itemsJson: JSON.stringify(items.map(i => ({ name: i.name, qty: i.qty, productId: i.productId, color: i.color, size: i.size, source: i.source }))),
+        // Stripe metadata values max 500 chars — keep only what webhook needs
+        itemsJson: JSON.stringify(items.map(i => ({ id: i.productId, q: i.qty, c: i.color, s: i.size, src: i.source }))).substring(0, 500),
       },
     })
 
     return res.status(200).json({ url: session.url, sessionId: session.id })
   } catch (err) {
-    console.error('Checkout error:', err)
-    const msg = err.type === 'StripeInvalidRequestError'
-      ? 'Payment setup issue. Please contact support.'
-      : err.message
-    return res.status(500).json({ error: msg })
+    console.error('Checkout error:', err.type, err.message, err.raw?.message)
+    return res.status(500).json({ error: err.message || 'Something went wrong. Please try again.' })
   }
 }
 

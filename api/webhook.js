@@ -66,10 +66,10 @@ export default async function handler(req, res) {
         name: li.description,
         qty: li.quantity,
         price: li.amount_total / 100 / li.quantity,
-        productId: orderItems[idx]?.productId || null,
-        color: orderItems[idx]?.color || '',
-        size: orderItems[idx]?.size || '',
-        source: orderItems[idx]?.source || '',
+        productId: orderItems[idx]?.id || orderItems[idx]?.productId || null,
+        color: orderItems[idx]?.c || orderItems[idx]?.color || '',
+        size: orderItems[idx]?.s || orderItems[idx]?.size || '',
+        source: orderItems[idx]?.src || orderItems[idx]?.source || '',
       }))
 
     const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0)
